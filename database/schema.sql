@@ -126,17 +126,22 @@ CREATE TABLE menu_items (
 
 -- Customer "places" Order (0..1 to many); Employee "enters" Order (1 to many);
 -- Promotion "applies to" Order (an order may have no promotion)
+-- Two data-layer columns that are not attributes in the class diagram:
+--   storeID        the store where the order was placed, so reports can filter by store
+--   pointsRedeemed loyalty points the customer used on the order (Customer Loyalty Report)
 CREATE TABLE orders (
     orderID            TEXT PRIMARY KEY,
     customerID         INTEGER REFERENCES customers(customerID),
     employeeID         INTEGER NOT NULL REFERENCES employees(employeeID),
+    storeID            INTEGER NOT NULL REFERENCES stores(storeID),
     promotionID        INTEGER REFERENCES promotions(promotionID),
     orderLine          INTEGER NOT NULL DEFAULT 0,
     orderDate          TEXT NOT NULL,
     orderType          TEXT NOT NULL,
     orderTotal         REAL NOT NULL DEFAULT 0 CHECK (orderTotal >= 0),
     orderStatus        TEXT NOT NULL,
-    confirmationNumber INTEGER UNIQUE
+    confirmationNumber INTEGER UNIQUE,
+    pointsRedeemed     INTEGER NOT NULL DEFAULT 0 CHECK (pointsRedeemed >= 0)
 );
 
 -- Order "contains" OrderLine (aggregation, 1..*); OrderLine "refers to" MenuItem (many to 1)
@@ -240,6 +245,7 @@ CREATE TABLE loyalty_report_customers (
 
 -- Indexes on foreign keys used for lookups (Chapter 9: optimizing access speed)
 CREATE INDEX idx_orders_date        ON orders(orderDate);
+CREATE INDEX idx_orders_store       ON orders(storeID);
 CREATE INDEX idx_orders_customer    ON orders(customerID);
 CREATE INDEX idx_order_lines_order  ON order_lines(orderID);
 CREATE INDEX idx_payments_order     ON payments(orderID);
