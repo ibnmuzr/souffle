@@ -126,9 +126,8 @@ CREATE TABLE menu_items (
 
 -- Customer "places" Order (0..1 to many); Employee "enters" Order (1 to many);
 -- Promotion "applies to" Order (an order may have no promotion)
--- Two data-layer columns that are not attributes in the class diagram:
---   storeID        the store where the order was placed, so reports can filter by store
---   pointsRedeemed loyalty points the customer used on the order (Customer Loyalty Report)
+-- One data-layer column that is not an attribute in the class diagram:
+--   storeID  the store where the order was placed, so reports can filter by store
 CREATE TABLE orders (
     orderID            TEXT PRIMARY KEY,
     customerID         INTEGER REFERENCES customers(customerID),
@@ -140,8 +139,7 @@ CREATE TABLE orders (
     orderType          TEXT NOT NULL,
     orderTotal         REAL NOT NULL DEFAULT 0 CHECK (orderTotal >= 0),
     orderStatus        TEXT NOT NULL,
-    confirmationNumber INTEGER UNIQUE,
-    pointsRedeemed     INTEGER NOT NULL DEFAULT 0 CHECK (pointsRedeemed >= 0)
+    confirmationNumber INTEGER UNIQUE
 );
 
 -- Order "contains" OrderLine (aggregation, 1..*); OrderLine "refers to" MenuItem (many to 1)
@@ -217,9 +215,7 @@ CREATE TABLE inventory_reports (
 CREATE TABLE customer_loyalty_reports (
     reportID            INTEGER PRIMARY KEY REFERENCES reports(reportID) ON DELETE CASCADE,
     registeredCustomers INTEGER NOT NULL DEFAULT 0,
-    repeatPurchases     INTEGER NOT NULL DEFAULT 0,
-    pointsIssued        INTEGER NOT NULL DEFAULT 0,
-    pointsRedeemed      INTEGER NOT NULL DEFAULT 0
+    repeatPurchases     INTEGER NOT NULL DEFAULT 0
 );
 
 -- SalesReport "summarizes" Order (many to many)

@@ -52,7 +52,14 @@ class InventoryItem:
     def updateQuantity(self, quantity: int) -> None:
         self.quantity = quantity
 
-    def isBelowMinimum(self) -> bool:
+    def isBelowMinimum(self, itemID: int) -> bool:
+        """True when the item's quantity is under its minimum quantity.
+
+        Called by the Inventory Report for each item in the store's inventory (sequence
+        diagram: isBelowMinimum(itemID) -> belowMinimum).
+        """
+        if itemID != self.itemID:
+            raise ValueError(f"isBelowMinimum was called with item {itemID} on item {self.itemID}.")
         return self.quantity < self.minimumQuantity
 
     def restock(self, quantity: int) -> None:

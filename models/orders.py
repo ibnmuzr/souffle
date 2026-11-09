@@ -1,8 +1,11 @@
 """Orders (Manage Orders use case): Order, OrderLine, MenuItem."""
 from __future__ import annotations
 
+from contextlib import closing
 from dataclasses import dataclass
 from datetime import date
+
+from database.connection import get_connection
 
 
 @dataclass
@@ -22,8 +25,19 @@ class Order:
     def removeItem(self):
         raise NotImplementedError("Planned for a later prototype.")
 
-    def calculateTotal(self):
-        raise NotImplementedError("Planned for a later prototype.")
+    def calculateTotal(self, orderID: str) -> float:
+        """Add up the line totals of the order, store the result in orderTotal and return it.
+
+        Called by the Sales Report for each order in the period (sequence diagram:
+        calculateTotal(orderID) -> orderTotal).
+        """
+        with closing(get_connection()) as conn:
+            total = conn.execute(
+                "SELECT COALESCE(SUM(lineTotal), 0) FROM order_lines WHERE orderID = ?",
+                (orderID,),
+            ).fetchone()[0]
+        self.orderTotal = round(total, 2)
+        return self.orderTotal
 
     def sendToKitchen(self):
         raise NotImplementedError("Planned for a later prototype.")
@@ -42,6 +56,13 @@ class Order:
 
     def estimateReadyTime(self):
         raise NotImplementedError("Planned for a later prototype.")
+
+
+def order_from_row(row) -> Order:
+    """Build an Order object from a row of the orders table."""
+    return Order(row["orderID"], row["orderLine"], date.fromisoformat(row["orderDate"]),
+                 row["orderType"], row["orderTotal"], row["orderStatus"],
+                 row["confirmationNumber"])
 
 
 @dataclass

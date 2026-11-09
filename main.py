@@ -1,9 +1,11 @@
-"""Soufflé Management System, prototype 1.
+"""Soufflé Management System: prototype demo.
 
-Builds the database, then loads rows into the class-diagram classes to show that
-the classes, their attributes and the database line up.
+Builds the database, loads rows into the class-diagram classes to show that the
+classes, their attributes and the database line up, then runs the Create Reports
+use case (all three report types) the way the sequence diagrams describe it.
 
 Run from the project folder:  python3 main.py
+For the interactive report menu: python3 create_reports.py
 """
 from datetime import date
 
@@ -11,8 +13,9 @@ from database.connection import get_connection
 from database.setup_db import create_database
 from models import (
     Customer, Manager, Person, Store, InventoryItem, MenuItem,
-    CashPayment, SharedPromotion, SalesReport, InventoryReport,
+    CashPayment, SharedPromotion, SalesReport, InventoryReport, CustomerLoyaltyReport,
 )
+from models.reports import next_report_id
 
 TABLES = [
     "persons", "customers", "employees", "managers", "employee_accounts",
@@ -34,7 +37,7 @@ def main():
     create_database()
     conn = get_connection()
 
-    print("=== Soufflé Management System: prototype 1 ===\n")
+    print("=== Soufflé Management System: prototype demo ===\n")
     print("Database tables (rows):")
     for table in TABLES:
         count = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
@@ -55,7 +58,7 @@ def main():
     print("\nEaton Centre stock below minimum (InventoryItem.isBelowMinimum):")
     for r in conn.execute("SELECT * FROM inventory_items WHERE inventoryID = 1"):
         item = InventoryItem(r["itemID"], r["itemName"], r["quantity"], r["minimumQuantity"])
-        if item.isBelowMinimum():
+        if item.isBelowMinimum(item.itemID):
             print(f"  {item.itemName}: {item.quantity} left, minimum {item.minimumQuantity}")
 
     r = conn.execute(
@@ -94,16 +97,20 @@ def main():
         "SELECT * FROM reports r JOIN sales_reports s ON s.reportID = r.reportID"
     ).fetchone()
     sales = SalesReport(r["reportID"], d(r["startDate"]), d(r["endDate"]), d(r["createdDate"]),
-                        r["format"], r["totalRevenue"], r["unitSold"], r["averageOrderTotal"])
-    print(f"\nSales report {sales.startDate} to {sales.endDate}: revenue ${sales.totalRevenue:.2f}, "
-          f"{sales.unitSold} units, average order ${sales.averageOrderTotal:.2f}")
+                        r["format"], managerID=r["managerID"], storeID=r["storeID"],
+                        totalRevenue=r["totalRevenue"], unitSold=r["unitSold"],
+                        averageOrderTotal=r["averageOrderTotal"])
+    print(f"\nSaved sales report {sales.startDate} to {sales.endDate}: revenue "
+          f"${sales.totalRevenue:.2f}, {sales.unitSold} units, average order "
+          f"${sales.averageOrderTotal:.2f}")
 
     r = conn.execute(
         "SELECT * FROM reports r JOIN inventory_reports i ON i.reportID = r.reportID"
     ).fetchone()
     inv = InventoryReport(r["reportID"], d(r["startDate"]), d(r["endDate"]), d(r["createdDate"]),
-                          r["format"], r["itemsBelowMinimum"])
-    print(f"Inventory report: {inv.itemsBelowMinimum} items below minimum")
+                          r["format"], managerID=r["managerID"], storeID=r["storeID"],
+                          itemsBelowMinimum=r["itemsBelowMinimum"])
+    print(f"Saved inventory report: {inv.itemsBelowMinimum} items below minimum")
 
     print("\nAbstract classes cannot be created directly:")
     try:
@@ -112,7 +119,25 @@ def main():
         print(f"  {err}")
 
     conn.close()
+    create_reports_demo(manager)
     print("\nDone.")
+
+
+def create_reports_demo(manager):
+    """Create Reports (UC 06): the manager generates, saves and exports each report type
+    for Soufflé Eaton Centre, October 1 to November 30, 2026."""
+    print("\n=== Create Reports (UC 06) ===")
+    print(f"Manager: {manager.getFullName()}")
+    start, end, store = date(2026, 10, 1), date(2026, 11, 30), 1
+    for report_type in (SalesReport, InventoryReport, CustomerLoyaltyReport):
+        report = report_type(next_report_id(), start, end, date.today(), "CSV",
+                             managerID=manager.managerID, storeID=store)
+        print()
+        if report.retrieveRecords(start, end, store):
+            print(report.save(report.reportID))
+            print(report.export(report.reportID, "CSV"))
+        else:
+            print(f"No records for the {report.REPORT_NAME.lower()} report in this period.")
 
 
 if __name__ == "__main__":

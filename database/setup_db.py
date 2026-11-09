@@ -61,19 +61,19 @@ INSERT INTO draft_promotions  VALUES (2, '2026-10-22');
 INSERT INTO customer_shared_promotions VALUES (1, 1);
 
 -- orderID, customerID (NULL = walk-in), employeeID, storeID, promotionID, orderLine,
--- orderDate, orderType, orderTotal, orderStatus, confirmationNumber, pointsRedeemed
+-- orderDate, orderType, orderTotal, orderStatus, confirmationNumber
 INSERT INTO orders VALUES
-  ('ORD-0001', 1,    1, 1, NULL, 2, '2026-10-22', 'in-store', 19.48, 'completed', 1001,  0),
-  ('ORD-0002', 2,    1, 1, NULL, 2, '2026-10-25', 'in-store', 33.97, 'completed', 1002,  0),
-  ('ORD-0003', 1,    1, 1, NULL, 2, '2026-10-29', 'takeout',  30.95, 'completed', 1003, 10),
-  ('ORD-0004', NULL, 1, 1, NULL, 2, '2026-11-02', 'in-store', 22.97, 'completed', 1004,  0),
-  ('ORD-0005', 2,    1, 1, NULL, 1, '2026-11-04', 'in-store', 31.98, 'completed', 1005, 20),
-  ('ORD-0006', 3,    1, 1, NULL, 2, '2026-11-05', 'takeout',  14.47, 'completed', 1006,  0),
-  ('ORD-0007', 1,    1, 1, NULL, 1, '2026-11-05', 'in-store', 24.99, 'cancelled', 1007,  0),
-  ('ORD-0008', 4,    1, 2, NULL, 2, '2026-10-24', 'in-store', 20.48, 'completed', 1008,  0),
-  ('ORD-0009', NULL, 1, 2, NULL, 2, '2026-10-30', 'takeout',  11.48, 'completed', 1009,  0),
-  ('ORD-0010', 4,    1, 2, NULL, 2, '2026-11-03', 'in-store', 34.97, 'completed', 1010, 15),
-  ('ORD-0011', 2,    1, 2, NULL, 1, '2026-11-04', 'takeout',   7.99, 'completed', 1011,  0);
+  ('ORD-0001', 1,    1, 1, NULL, 2, '2026-10-22', 'in-store', 19.48, 'completed', 1001),
+  ('ORD-0002', 2,    1, 1, NULL, 2, '2026-10-25', 'in-store', 33.97, 'completed', 1002),
+  ('ORD-0003', 1,    1, 1, NULL, 2, '2026-10-29', 'takeout',  30.95, 'completed', 1003),
+  ('ORD-0004', NULL, 1, 1, NULL, 2, '2026-11-02', 'in-store', 22.97, 'completed', 1004),
+  ('ORD-0005', 2,    1, 1, NULL, 1, '2026-11-04', 'in-store', 31.98, 'completed', 1005),
+  ('ORD-0006', 3,    1, 1, NULL, 2, '2026-11-05', 'takeout',  14.47, 'completed', 1006),
+  ('ORD-0007', 1,    1, 1, NULL, 1, '2026-11-05', 'in-store', 24.99, 'cancelled', 1007),
+  ('ORD-0008', 4,    1, 2, NULL, 2, '2026-10-24', 'in-store', 20.48, 'completed', 1008),
+  ('ORD-0009', NULL, 1, 2, NULL, 2, '2026-10-30', 'takeout',  11.48, 'completed', 1009),
+  ('ORD-0010', 4,    1, 2, NULL, 2, '2026-11-03', 'in-store', 34.97, 'completed', 1010),
+  ('ORD-0011', 2,    1, 2, NULL, 1, '2026-11-04', 'takeout',   7.99, 'completed', 1011);
 
 -- orderLineID, orderID, itemID (menu item), quantity, specialInstructions, lineTotal
 INSERT INTO order_lines VALUES

@@ -4,8 +4,12 @@ Attributes and operations follow the team class diagram (Milestone 3) exactly.
 """
 from __future__ import annotations
 
+from contextlib import closing
 from dataclasses import dataclass
 from datetime import date
+
+from database.connection import get_connection
+from .orders import order_from_row
 
 
 @dataclass
@@ -42,8 +46,18 @@ class Customer(Person):
     def payOrder(self):
         raise NotImplementedError("Planned for a later prototype.")
 
-    def viewOrderHistory(self):
-        raise NotImplementedError("Planned for a later prototype.")
+    def viewOrderHistory(self, customerID: int) -> list:
+        """Return the customer's orders, newest first.
+
+        Called by the Customer Loyalty Report for each registered customer (sequence
+        diagram: viewOrderHistory(customerID) -> orderHistory).
+        """
+        with closing(get_connection()) as conn:
+            rows = conn.execute(
+                "SELECT * FROM orders WHERE customerID = ? ORDER BY orderDate DESC, orderID DESC",
+                (customerID,),
+            ).fetchall()
+        return [order_from_row(row) for row in rows]
 
     def redeemPoints(self):
         raise NotImplementedError("Planned for a later prototype.")
