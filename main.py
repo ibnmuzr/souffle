@@ -12,17 +12,18 @@ from datetime import date
 from database.connection import get_connection
 from database.setup_db import create_database
 from models import (
-    Customer, Manager, Person, Store, InventoryItem, MenuItem,
-    CashPayment, SharedPromotion, SalesReport, InventoryReport, CustomerLoyaltyReport,
+    Customer, Manager, Person, Store, InventoryItem, MenuItem, Order, Promotion,
+    CashPayment, SalesReport, InventoryReport, CustomerLoyaltyReport,
 )
+from models.orders import order_from_row
 from models.reports import next_report_id
 
 TABLES = [
     "persons", "customers", "employees", "managers", "employee_accounts",
     "stores", "inventories", "inventory_items",
-    "menu_items", "orders", "order_lines",
+    "menu_items", "orders", "order_lines", "sales_records", "cancellation_records",
     "payments", "card_payments", "cash_payments", "receipts",
-    "promotions", "draft_promotions", "shared_promotions", "customer_shared_promotions",
+    "promotions", "customer_promotions",
     "reports", "sales_reports", "inventory_reports", "customer_loyalty_reports",
     "sales_report_orders", "inventory_report_items", "loyalty_report_customers",
 ]
@@ -50,9 +51,9 @@ def main():
 
     print("\nMenu:")
     for r in conn.execute("SELECT * FROM menu_items"):
-        item = MenuItem(r["itemID"], r["name"], r["description"], r["category"],
+        item = MenuItem(r["menuItemID"], r["name"], r["description"], r["category"],
                         r["price"], bool(r["isAvailable"]))
-        status = "available" if item.checkAvailability() else "unavailable"
+        status = "available" if item.checkAvailability(item.menuItemID, 1) else "unavailable"
         print(f"  {item.name:<34}${item.price:>6.2f}  ({status})")
 
     print("\nEaton Centre stock below minimum (InventoryItem.isBelowMinimum):")
@@ -83,15 +84,17 @@ def main():
     print(f"\nCash payment of ${cash.amount:.2f} with ${cash.cashReceived:.2f} received: "
           f"change due ${cash.calculateChange():.2f}")
 
-    r = conn.execute(
-        "SELECT * FROM promotions p JOIN shared_promotions s ON s.promotionID = p.promotionID"
-    ).fetchone()
-    promo = SharedPromotion(r["promotionID"], r["title"], r["discountType"], r["discountValue"],
-                            d(r["startDate"]), d(r["endDate"]), d(r["sharingDate"]),
-                            r["sharingChannel"])
-    print(f"\nPromotion '{promo.title}' ({promo.discountValue}% off, shared by "
-          f"{promo.sharingChannel}): runs {promo.duration} days, "
-          f"discount on a $19.48 order = ${promo.calculateDiscount(19.48):.2f}")
+    print("\nPromotions (lifecycleState, /duration):")
+    for r in conn.execute("SELECT * FROM promotions"):
+        promo = Promotion(r["promotionID"], r["title"], r["discountType"], r["discountValue"],
+                          d(r["creationDate"]), d(r["startDate"]), d(r["endDate"]),
+                          r["sharingChannel"] or "", r["lifecycleState"])
+        print(f"  {promo.title:<22}{promo.lifecycleState:<9}runs {promo.duration} days")
+
+    order = order_from_row(conn.execute("SELECT * FROM orders WHERE orderID = 'ORD-0002'").fetchone())
+    discount = order.calculateDiscount(order.orderID, order.orderTotal, 3)
+    print(f"Order.calculateDiscount: 'November Latte Days' on {order.orderID} "
+          f"(${order.orderTotal:.2f}) = ${discount:.2f} off")
 
     r = conn.execute(
         "SELECT * FROM reports r JOIN sales_reports s ON s.reportID = r.reportID"

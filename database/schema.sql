@@ -1,6 +1,11 @@
 -- Soufflé Management System: database schema (SQLite)
--- One table per class in the Milestone 3 class diagram.
---   * Columns use the exact attribute names from the class diagram.
+-- Built from the final Milestone 4 class diagram.
+--   * One table per class whose objects must be kept. Columns use the exact attribute
+--     names from the class diagram.
+--   * OrderHandler («controller») and InventoryUI («interface») only hold what is on
+--     screen or in progress while the app runs, so they have no table.
+--   * Sales Database and Inventory Database are the data-access classes: their
+--     records are sales_records, cancellation_records and inventory_items.
 --   * Generalization (a-kind-of): each subclass table shares its parent's key
 --     (class-table inheritance, Chapter 9).
 --   * Associations become foreign keys; many-to-many associations get a link table.
@@ -33,36 +38,9 @@ CREATE TABLE employees (
     hireDate         TEXT
 );
 
--- ============================================================
--- Stores and inventory: Store, Inventory, InventoryItem
--- ============================================================
-CREATE TABLE stores (
-    storeID   INTEGER PRIMARY KEY,
-    storeName TEXT NOT NULL,
-    address   TEXT
-);
-
--- Store "has" Inventory (1 to 1)
-CREATE TABLE inventories (
-    inventoryID INTEGER PRIMARY KEY,
-    storeID     INTEGER NOT NULL UNIQUE REFERENCES stores(storeID),
-    lastUpdated TEXT
-);
-
--- Inventory "contains" InventoryItem (composition, 1 to many)
-CREATE TABLE inventory_items (
-    itemID          INTEGER PRIMARY KEY,
-    inventoryID     INTEGER NOT NULL REFERENCES inventories(inventoryID) ON DELETE CASCADE,
-    itemName        TEXT NOT NULL,
-    quantity        INTEGER NOT NULL DEFAULT 0 CHECK (quantity >= 0),
-    minimumQuantity INTEGER NOT NULL DEFAULT 0 CHECK (minimumQuantity >= 0)
-);
-
--- Manager "manages" Inventory (many to 1)
 CREATE TABLE managers (
-    managerID   INTEGER PRIMARY KEY,
-    personID    INTEGER NOT NULL UNIQUE REFERENCES persons(personID),
-    inventoryID INTEGER REFERENCES inventories(inventoryID)
+    managerID INTEGER PRIMARY KEY,
+    personID  INTEGER NOT NULL UNIQUE REFERENCES persons(personID)
 );
 
 -- ============================================================
@@ -80,43 +58,26 @@ CREATE TABLE employee_accounts (
 );
 
 -- ============================================================
--- Promotions: Promotion -> DraftPromotion, SharedPromotion
+-- Stores and inventory: Store, Inventory, InventoryItem
 -- ============================================================
--- Manager "creates" Promotion (1 to many). /duration is derived, so it is not stored.
-CREATE TABLE promotions (
-    promotionID   INTEGER PRIMARY KEY,
-    managerID     INTEGER NOT NULL REFERENCES managers(managerID),
-    title         TEXT NOT NULL,
-    discountType  TEXT NOT NULL CHECK (discountType IN ('percentage', 'fixed')),
-    discountValue INTEGER NOT NULL CHECK (discountValue >= 0),
-    startDate     TEXT NOT NULL,
-    endDate       TEXT NOT NULL,
-    CHECK (endDate >= startDate)
+CREATE TABLE stores (
+    storeID   INTEGER PRIMARY KEY,
+    storeName TEXT NOT NULL,
+    address   TEXT
 );
 
-CREATE TABLE draft_promotions (
-    promotionID INTEGER PRIMARY KEY REFERENCES promotions(promotionID) ON DELETE CASCADE,
-    savedDate   TEXT NOT NULL
-);
-
-CREATE TABLE shared_promotions (
-    promotionID    INTEGER PRIMARY KEY REFERENCES promotions(promotionID) ON DELETE CASCADE,
-    sharingDate    TEXT NOT NULL,
-    sharingChannel TEXT NOT NULL
-);
-
--- Customer "receives" SharedPromotion (many to many)
-CREATE TABLE customer_shared_promotions (
-    customerID  INTEGER NOT NULL REFERENCES customers(customerID),
-    promotionID INTEGER NOT NULL REFERENCES shared_promotions(promotionID),
-    PRIMARY KEY (customerID, promotionID)
+-- Store "has" Inventory (1 to 1)
+CREATE TABLE inventories (
+    inventoryID INTEGER PRIMARY KEY,
+    storeID     INTEGER NOT NULL UNIQUE REFERENCES stores(storeID),
+    lastUpdated TEXT
 );
 
 -- ============================================================
--- Orders: Order, OrderLine, MenuItem
+-- Menu and orders: MenuItem, Order, OrderLine
 -- ============================================================
 CREATE TABLE menu_items (
-    itemID      INTEGER PRIMARY KEY,
+    menuItemID  INTEGER PRIMARY KEY,
     name        TEXT NOT NULL,
     description TEXT,
     category    TEXT,
@@ -124,38 +85,92 @@ CREATE TABLE menu_items (
     isAvailable INTEGER NOT NULL DEFAULT 1 CHECK (isAvailable IN (0, 1))
 );
 
--- Customer "places" Order (0..1 to many); Employee "enters" Order (1 to many);
--- Promotion "applies to" Order (an order may have no promotion)
--- One data-layer column that is not an attribute in the class diagram:
---   storeID  the store where the order was placed, so reports can filter by store
+-- Inventory "contains" InventoryItem (composition, 1 to many);
+-- MenuItem is linked to InventoryItem (1 to many; supplies like takeout boxes have none)
+CREATE TABLE inventory_items (
+    itemID          INTEGER PRIMARY KEY,
+    inventoryID     INTEGER NOT NULL REFERENCES inventories(inventoryID) ON DELETE CASCADE,
+    menuItemID      INTEGER REFERENCES menu_items(menuItemID),
+    itemName        TEXT NOT NULL,
+    quantity        INTEGER NOT NULL DEFAULT 0 CHECK (quantity >= 0),
+    minimumQuantity INTEGER NOT NULL DEFAULT 0 CHECK (minimumQuantity >= 0)
+);
+
+-- ============================================================
+-- Promotions
+-- ============================================================
+-- Manager "creates" Promotion (1 to many). /duration is derived, so it is not stored.
+CREATE TABLE promotions (
+    promotionID    INTEGER PRIMARY KEY,
+    managerID      INTEGER NOT NULL REFERENCES managers(managerID),
+    title          TEXT NOT NULL,
+    discountType   TEXT NOT NULL CHECK (discountType IN ('percentage', 'fixed')),
+    discountValue  INTEGER NOT NULL CHECK (discountValue >= 0),
+    creationDate   TEXT NOT NULL,
+    startDate      TEXT NOT NULL,
+    endDate        TEXT NOT NULL,
+    sharingChannel TEXT,
+    lifecycleState TEXT NOT NULL CHECK (lifecycleState IN ('draft', 'shared', 'expired')),
+    CHECK (endDate >= startDate)
+);
+
+-- Customer "receives" Promotion (many to many)
+CREATE TABLE customer_promotions (
+    customerID  INTEGER NOT NULL REFERENCES customers(customerID),
+    promotionID INTEGER NOT NULL REFERENCES promotions(promotionID) ON DELETE CASCADE,
+    PRIMARY KEY (customerID, promotionID)
+);
+
+-- Promotion "applies to" Order (an order may have no promotion).
+-- The customer, employee and store of an order are kept as foreign keys so the
+-- order history, the Sales Report and the Customer Loyalty Report can find them
+-- (in the class diagram these links go through the OrderHandler).
+--   storeID is a data-layer column: it is not an attribute in the class diagram.
 CREATE TABLE orders (
-    orderID            TEXT PRIMARY KEY,
-    customerID         INTEGER REFERENCES customers(customerID),
-    employeeID         INTEGER NOT NULL REFERENCES employees(employeeID),
-    storeID            INTEGER NOT NULL REFERENCES stores(storeID),
-    promotionID        INTEGER REFERENCES promotions(promotionID),
-    orderLine          INTEGER NOT NULL DEFAULT 0,
-    orderDate          TEXT NOT NULL,
-    orderType          TEXT NOT NULL,
-    orderTotal         REAL NOT NULL DEFAULT 0 CHECK (orderTotal >= 0),
-    orderStatus        TEXT NOT NULL,
-    confirmationNumber INTEGER UNIQUE
+    orderID     TEXT PRIMARY KEY,
+    customerID  INTEGER REFERENCES customers(customerID),
+    employeeID  INTEGER NOT NULL REFERENCES employees(employeeID),
+    storeID     INTEGER NOT NULL REFERENCES stores(storeID),
+    promotionID INTEGER REFERENCES promotions(promotionID),
+    orderLine   INTEGER NOT NULL DEFAULT 0,
+    orderDate   TEXT NOT NULL,
+    orderType   TEXT NOT NULL,
+    orderTotal  REAL NOT NULL DEFAULT 0 CHECK (orderTotal >= 0),
+    orderStatus TEXT NOT NULL
 );
 
 -- Order "contains" OrderLine (aggregation, 1..*); OrderLine "refers to" MenuItem (many to 1)
 CREATE TABLE order_lines (
     orderLineID         INTEGER PRIMARY KEY,
     orderID             TEXT NOT NULL REFERENCES orders(orderID) ON DELETE CASCADE,
-    itemID              INTEGER NOT NULL REFERENCES menu_items(itemID),
+    menuItemID          INTEGER NOT NULL REFERENCES menu_items(menuItemID),
     quantity            INTEGER NOT NULL CHECK (quantity > 0),
     specialInstructions TEXT,
     lineTotal           REAL NOT NULL DEFAULT 0
 );
 
 -- ============================================================
+-- Sales Database: salesRecords and cancellationRecords
+-- ============================================================
+-- Sales Database "summarizes" Order: one record per sale (recordOrder)
+CREATE TABLE sales_records (
+    orderID      TEXT PRIMARY KEY REFERENCES orders(orderID),
+    recordedDate TEXT NOT NULL,
+    amount       REAL NOT NULL CHECK (amount >= 0)
+);
+
+-- one record per cancelled order (logCancellation)
+CREATE TABLE cancellation_records (
+    orderID       TEXT PRIMARY KEY REFERENCES orders(orderID),
+    reason        TEXT NOT NULL,
+    approvedBy    INTEGER REFERENCES managers(managerID),  -- needed once preparation started
+    cancelledDate TEXT NOT NULL
+);
+
+-- ============================================================
 -- Payments: Payment (abstract) -> CardPayment, CashPayment; Receipt
 -- ============================================================
--- Order "paid by" Payment (1 to 1..*)
+-- Order "paid by" Payment
 CREATE TABLE payments (
     paymentID   INTEGER PRIMARY KEY,
     orderID     TEXT NOT NULL REFERENCES orders(orderID),
@@ -177,7 +192,7 @@ CREATE TABLE cash_payments (
     changeDue    REAL NOT NULL DEFAULT 0
 );
 
--- Payment "generates" Receipt (0..1 to 1)
+-- Payment "generates" Receipt (1 to 1)
 CREATE TABLE receipts (
     receiptNumber TEXT PRIMARY KEY,
     paymentID     INTEGER NOT NULL UNIQUE REFERENCES payments(paymentID),

@@ -21,14 +21,23 @@ INSERT INTO inventories VALUES
   (1, 1, '2026-10-22'),
   (2, 2, '2026-10-22');
 
-INSERT INTO inventory_items VALUES
-  (1, 1, 'Eggs (dozen)',         4,  5),
-  (2, 1, 'Cream cheese (kg)',   12,  8),
-  (3, 1, 'Sugar (kg)',          10,  6),
-  (4, 1, 'Coffee beans (kg)',    3,  4),
-  (5, 1, 'Takeout boxes',      150, 100),
-  (6, 2, 'Eggs (dozen)',         8,  5),
-  (7, 2, 'Cream cheese (kg)',    9,  8);
+INSERT INTO menu_items (menuItemID, name, description, category, price, isAvailable) VALUES
+  (1, 'Japanese Cheesecake 4" (Small)',   'Fresh-baked, choice of toppings', 'Cheesecake',     7.99, 1),
+  (2, 'Japanese Cheesecake 6" (Regular)', 'Fresh-baked, choice of toppings', 'Cheesecake',    15.99, 1),
+  (3, 'Japanese Cheesecake 8" (Large)',   'Fresh-baked, choice of toppings', 'Cheesecake',    24.99, 1),
+  (4, 'Japanese Tart',                    'Single tart',                     'Tart',           4.99, 1),
+  (5, 'Americano',                        'Hot coffee',                      'Hot Beverages',  3.49, 1),
+  (6, 'Latte',                            'Hot coffee with milk',            'Hot Beverages',  4.49, 1);
+
+-- menuItemID links an ingredient to the menu item it is mainly used for (NULL for supplies)
+INSERT INTO inventory_items (itemID, inventoryID, menuItemID, itemName, quantity, minimumQuantity) VALUES
+  (1, 1, 2,    'Eggs (dozen)',         4,   5),
+  (2, 1, 2,    'Cream cheese (kg)',   12,   8),
+  (3, 1, 2,    'Sugar (kg)',          10,   6),
+  (4, 1, 5,    'Coffee beans (kg)',    3,   4),
+  (5, 1, NULL, 'Takeout boxes',      150, 100),
+  (6, 2, 2,    'Eggs (dozen)',         8,   5),
+  (7, 2, 2,    'Cream cheese (kg)',    9,   8);
 
 INSERT INTO persons VALUES
   (1, 'Alex',   'Martin',   '514-555-0101', 'alex.martin@example.com'),
@@ -38,44 +47,37 @@ INSERT INTO persons VALUES
   (5, 'Marc',   'Gagnon',   '514-555-0105', 'marc.gagnon@example.com'),
   (6, 'Emma',   'Roy',      '514-555-0106', 'emma.roy@example.com');
 
-INSERT INTO managers  VALUES (1, 1, 1);
+INSERT INTO managers  VALUES (1, 1);
 INSERT INTO employees VALUES (1, 2, 'sam.t', 'changeme', 'active', '2026-05-01');
 INSERT INTO customers VALUES (1, 3), (2, 4), (3, 5), (4, 6);
 
 INSERT INTO employee_accounts VALUES
   (1, 1, 1, 'sam.tremblay@example.com', 'changeme', 'active', 'uploads/void_cheque_1.pdf');
 
-INSERT INTO menu_items VALUES
-  (1, 'Japanese Cheesecake 4" (Small)',   'Fresh-baked, choice of toppings', 'Cheesecake',     7.99, 1),
-  (2, 'Japanese Cheesecake 6" (Regular)', 'Fresh-baked, choice of toppings', 'Cheesecake',    15.99, 1),
-  (3, 'Japanese Cheesecake 8" (Large)',   'Fresh-baked, choice of toppings', 'Cheesecake',    24.99, 1),
-  (4, 'Japanese Tart',                    'Single tart',                     'Tart',           4.99, 1),
-  (5, 'Americano',                        'Hot coffee',                      'Hot Beverages',  3.49, 1),
-  (6, 'Latte',                            'Hot coffee with milk',            'Hot Beverages',  4.49, 1);
-
+-- promotionID, managerID, title, discountType, discountValue, creationDate, startDate,
+-- endDate, sharingChannel, lifecycleState
 INSERT INTO promotions VALUES
-  (1, 1, 'Fall Loyalty Week', 'percentage', 10, '2026-10-20', '2026-10-31'),
-  (2, 1, 'Holiday Bundle',    'fixed',       5, '2026-12-01', '2026-12-24');
-INSERT INTO shared_promotions VALUES (1, '2026-10-20', 'email');
-INSERT INTO draft_promotions  VALUES (2, '2026-10-22');
-INSERT INTO customer_shared_promotions VALUES (1, 1);
+  (1, 1, 'Fall Loyalty Week',   'percentage', 10, '2026-10-15', '2026-10-20', '2026-10-31', 'email',        'expired'),
+  (2, 1, 'Holiday Bundle',      'fixed',       5, '2026-11-02', '2026-12-01', '2026-12-24', NULL,           'draft'),
+  (3, 1, 'November Latte Days', 'percentage', 15, '2026-10-30', '2026-11-01', '2026-11-30', 'social media', 'shared');
+INSERT INTO customer_promotions VALUES (1, 1), (2, 3), (4, 3);
 
 -- orderID, customerID (NULL = walk-in), employeeID, storeID, promotionID, orderLine,
--- orderDate, orderType, orderTotal, orderStatus, confirmationNumber
+-- orderDate, orderType, orderTotal, orderStatus
 INSERT INTO orders VALUES
-  ('ORD-0001', 1,    1, 1, NULL, 2, '2026-10-22', 'in-store', 19.48, 'completed', 1001),
-  ('ORD-0002', 2,    1, 1, NULL, 2, '2026-10-25', 'in-store', 33.97, 'completed', 1002),
-  ('ORD-0003', 1,    1, 1, NULL, 2, '2026-10-29', 'takeout',  30.95, 'completed', 1003),
-  ('ORD-0004', NULL, 1, 1, NULL, 2, '2026-11-02', 'in-store', 22.97, 'completed', 1004),
-  ('ORD-0005', 2,    1, 1, NULL, 1, '2026-11-04', 'in-store', 31.98, 'completed', 1005),
-  ('ORD-0006', 3,    1, 1, NULL, 2, '2026-11-05', 'takeout',  14.47, 'completed', 1006),
-  ('ORD-0007', 1,    1, 1, NULL, 1, '2026-11-05', 'in-store', 24.99, 'cancelled', 1007),
-  ('ORD-0008', 4,    1, 2, NULL, 2, '2026-10-24', 'in-store', 20.48, 'completed', 1008),
-  ('ORD-0009', NULL, 1, 2, NULL, 2, '2026-10-30', 'takeout',  11.48, 'completed', 1009),
-  ('ORD-0010', 4,    1, 2, NULL, 2, '2026-11-03', 'in-store', 34.97, 'completed', 1010),
-  ('ORD-0011', 2,    1, 2, NULL, 1, '2026-11-04', 'takeout',   7.99, 'completed', 1011);
+  ('ORD-0001', 1,    1, 1, NULL, 2, '2026-10-22', 'in-store', 19.48, 'completed'),
+  ('ORD-0002', 2,    1, 1, NULL, 2, '2026-10-25', 'in-store', 33.97, 'completed'),
+  ('ORD-0003', 1,    1, 1, NULL, 2, '2026-10-29', 'takeout',  30.95, 'completed'),
+  ('ORD-0004', NULL, 1, 1, NULL, 2, '2026-11-02', 'in-store', 22.97, 'completed'),
+  ('ORD-0005', 2,    1, 1, NULL, 1, '2026-11-04', 'in-store', 31.98, 'completed'),
+  ('ORD-0006', 3,    1, 1, NULL, 2, '2026-11-05', 'takeout',  14.47, 'completed'),
+  ('ORD-0007', 1,    1, 1, NULL, 1, '2026-11-05', 'in-store', 24.99, 'cancelled'),
+  ('ORD-0008', 4,    1, 2, NULL, 2, '2026-10-24', 'in-store', 20.48, 'completed'),
+  ('ORD-0009', NULL, 1, 2, NULL, 2, '2026-10-30', 'takeout',  11.48, 'completed'),
+  ('ORD-0010', 4,    1, 2, NULL, 2, '2026-11-03', 'in-store', 34.97, 'completed'),
+  ('ORD-0011', 2,    1, 2, NULL, 1, '2026-11-04', 'takeout',   7.99, 'completed');
 
--- orderLineID, orderID, itemID (menu item), quantity, specialInstructions, lineTotal
+-- orderLineID, orderID, menuItemID, quantity, specialInstructions, lineTotal
 INSERT INTO order_lines VALUES
   ( 1, 'ORD-0001', 2, 1, 'Strawberry topping', 15.99),
   ( 2, 'ORD-0001', 5, 1, NULL,                  3.49),
@@ -97,9 +99,20 @@ INSERT INTO order_lines VALUES
   (18, 'ORD-0010', 4, 2, NULL,                  9.98),
   (19, 'ORD-0011', 1, 1, NULL,                  7.99);
 
-INSERT INTO payments      VALUES (1, 'ORD-0001', 19.48, 'cash', '2026-10-22', 'approved');
+-- Sales Database records: every completed order is a sale; ORD-0007 was cancelled
+INSERT INTO sales_records (orderID, recordedDate, amount)
+  SELECT orderID, orderDate, orderTotal FROM orders WHERE orderStatus = 'completed';
+INSERT INTO cancellation_records VALUES
+  ('ORD-0007', 'Customer changed their mind', NULL, '2026-11-05');
+
+INSERT INTO payments VALUES
+  (1, 'ORD-0001', 19.48, 'cash', '2026-10-22', 'approved'),
+  (2, 'ORD-0002', 33.97, 'card', '2026-10-25', 'approved');
 INSERT INTO cash_payments VALUES (1, 20.00, 0.52);
-INSERT INTO receipts      VALUES ('R-0001', 1, 19.48, '2026-10-22');
+INSERT INTO card_payments VALUES (2, 'debit', 'AUTH-48213');
+INSERT INTO receipts VALUES
+  ('R-0001', 1, 19.48, '2026-10-22'),
+  ('R-0002', 2, 33.97, '2026-10-25');
 
 INSERT INTO reports VALUES
   (1, 1, 1, '2026-10-01', '2026-10-22', '2026-10-22', 'PDF'),
