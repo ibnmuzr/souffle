@@ -2,19 +2,21 @@
 
 Builds the database, loads rows into the class-diagram classes to show that the
 classes, their attributes and the database line up, then runs the Create Reports
-use case (all three report types) the way the sequence diagrams describe it.
+use cases built so far the way their sequence diagrams describe them:
+Manage Inventory (UC 04) and Create Reports (UC 06).
 
 Run from the project folder:  python3 main.py
-For the interactive report menu: python3 create_reports.py
+Interactive screens: python3 manage_inventory.py   and   python3 create_reports.py
 """
 from datetime import date
 
 from database.connection import get_connection
 from database.setup_db import create_database
 from models import (
-    Customer, Manager, Person, Store, InventoryItem, MenuItem, Order, Promotion,
+    Customer, Manager, Person, Store, InventoryItem, InventoryUI, MenuItem, Order, Promotion,
     CashPayment, SalesReport, InventoryReport, CustomerLoyaltyReport,
 )
+from models.inventory import load_inventory
 from models.orders import order_from_row
 from models.reports import next_report_id
 
@@ -122,8 +124,35 @@ def main():
         print(f"  {err}")
 
     conn.close()
+    manage_inventory_demo(manager)
     create_reports_demo(manager)
     print("\nDone.")
+
+
+def manage_inventory_demo(manager):
+    """Manage Inventory (UC 04): the manager views the Eaton Centre inventory, filters the
+    low items, restocks the eggs and tries a quantity that is not valid."""
+    print("\n=== Manage Inventory (UC 04) ===")
+    print(f"Manager: {manager.getFullName()}")
+    screen = InventoryUI(inventory=load_inventory(1))
+
+    print("\nView Inventory: viewInventoryList()")
+    screen.viewInventoryList()
+
+    print("\nFilter: items below minimum only")
+    screen.filterCategory = "below minimum"
+    screen.viewInventoryList()
+    screen.filterCategory = ""
+
+    print("\nUpdate Inventory Item: updateQuantity(1, 12)")
+    screen.updateQuantity(1, 12)
+    print("Update Inventory Item: updateQuantity(4, -3)")
+    screen.updateQuantity(4, -3)
+
+    store = Store(1, "Soufflé Eaton Centre", "")
+    print("\nStore.generateDailySales() for Eaton Centre:")
+    for day, total in store.generateDailySales().items():
+        print(f"  {day}  ${total:>6.2f}")
 
 
 def create_reports_demo(manager):

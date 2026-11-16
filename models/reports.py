@@ -83,6 +83,10 @@ class Report:
         if rows:
             self.content.append("-" * 64)
             self.content.extend(_table(header, rows))
+        for title, header, rows in self._extra_sections():
+            self.content.append("-" * 64)
+            self.content.append(title)
+            self.content.extend(_table(header, rows))
         self.content.append("=" * 64)
         print("\n".join(self.content))
 
@@ -128,6 +132,11 @@ class Report:
                 writer.writerow([])
                 writer.writerow(header)
                 writer.writerows(rows)
+                for title, header, rows in self._extra_sections():
+                    writer.writerow([])
+                    writer.writerow([title])
+                    writer.writerow(header)
+                    writer.writerows(rows)
         return f"{self.REPORT_NAME} report exported to exports/{path.name}"
 
     # ---- helpers shared by the report types (not in the class diagram) ------------------
@@ -164,6 +173,10 @@ class Report:
         """Insert the subclass row and the association rows."""
         raise NotImplementedError
 
+    def _extra_sections(self) -> list:
+        """More (title, header, rows) tables shown after the details. None by default."""
+        return []
+
 
 @dataclass
 class SalesReport(Report):
@@ -179,6 +192,8 @@ class SalesReport(Report):
         self.orders: List[Order] = []    # SalesReport "summarizes" Order
         self.orderTotals = {}            # orderID -> orderTotal returned by calculateTotal
         self.orderLines = []             # order lines of the period: (orderID, quantity)
+        self.unitsByItem = {}            # menu item name -> units sold
+        self.salesByDay = {}             # day -> sales total of that day
 
     def retrieveRecords(self, startDate: date, endDate: date, storeID: int) -> bool:
         """Sequence diagram "Create Reports: Generate Sales Report"."""
@@ -198,15 +213,24 @@ class SalesReport(Report):
         return True
 
     def compileSalesFigures(self, storeID: int, startDate: date, endDate: date) -> None:
-        """Collect the order lines of the store's completed orders in the period."""
+        """Compile the sales figures of the store's completed orders in the period:
+        the order lines (for the units sold), the units sold per menu item and the
+        sales per day."""
         order_ids = [row["orderID"] for row in self._completed_orders(storeID, startDate, endDate)]
+        self.orderLines, self.unitsByItem, self.salesByDay = [], {}, {}
         if not order_ids:
-            self.orderLines = []
             return
         marks = ", ".join("?" * len(order_ids))
-        rows = _rows(f"SELECT orderID, quantity FROM order_lines WHERE orderID IN ({marks}) "
-                     f"ORDER BY orderID, orderLineID", order_ids)
-        self.orderLines = [(row["orderID"], row["quantity"]) for row in rows]
+        rows = _rows(f"SELECT l.orderID, l.quantity, m.name FROM order_lines l "
+                     f"JOIN menu_items m ON m.menuItemID = l.menuItemID "
+                     f"WHERE l.orderID IN ({marks}) ORDER BY l.orderID, l.orderLineID", order_ids)
+        for row in rows:
+            self.orderLines.append((row["orderID"], row["quantity"]))
+            self.unitsByItem[row["name"]] = self.unitsByItem.get(row["name"], 0) + row["quantity"]
+        self.unitsByItem = dict(sorted(self.unitsByItem.items(), key=lambda pair: -pair[1]))
+        for order in self.orders:
+            day_total = self.salesByDay.get(order.orderDate, 0.0) + self.orderTotals[order.orderID]
+            self.salesByDay[order.orderDate] = round(day_total, 2)
 
     def calculateRevenue(self, storeID: int, orderTotals: list) -> float:
         self.totalRevenue = round(sum(orderTotals, 0.0), 2)
@@ -235,6 +259,12 @@ class SalesReport(Report):
                  units.get(o.orderID, 0), self.orderTotals[o.orderID]]
                 for o in self.orders]
         return header, rows
+
+    def _extra_sections(self) -> list:
+        return [("Units sold per menu item", ["Menu item", "Units"],
+                 [[name, units] for name, units in self.unitsByItem.items()]),
+                ("Sales per day", ["Day", "Sales"],
+                 [[day.isoformat(), total] for day, total in sorted(self.salesByDay.items())])]
 
     def _save_details(self, conn) -> None:
         conn.execute("INSERT INTO sales_reports VALUES (?, ?, ?, ?)",

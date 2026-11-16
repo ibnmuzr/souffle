@@ -5,10 +5,13 @@ inventory_database.py.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from contextlib import closing
+from dataclasses import dataclass, field
 from datetime import date
+from typing import Dict, List, Optional
 
-from .base import PLANNED
+from database.connection import get_connection
+from .inventory_database import InventoryDatabase
 
 
 @dataclass
@@ -21,8 +24,19 @@ class Store:
     storeName: str
     address: str
 
-    def generateDailySales(self):
-        raise NotImplementedError(PLANNED)
+    def generateDailySales(self) -> Dict[date, float]:
+        """Total sales of this store for each day that had sales, oldest day first.
+
+        Uses the Sales Database records (completed orders only; cancelled orders are not
+        sales). Also used by the Sales Report for its sales-per-day table.
+        """
+        with closing(get_connection()) as conn:
+            rows = conn.execute(
+                "SELECT s.recordedDate AS day, ROUND(SUM(s.amount), 2) AS total "
+                "FROM sales_records s JOIN orders o ON o.orderID = s.orderID "
+                "WHERE o.storeID = ? GROUP BY s.recordedDate ORDER BY s.recordedDate",
+                (self.storeID,)).fetchall()
+        return {date.fromisoformat(r["day"]): r["total"] for r in rows}
 
 
 @dataclass
@@ -34,12 +48,52 @@ class Inventory:
     """
     inventoryID: int
     lastUpdated: date
+    # Association from the class diagram: Inventory "accesses" Inventory Database
+    database: InventoryDatabase = field(default_factory=lambda: InventoryDatabase(1))
 
-    def getInventoryList(self, inventoryID: int):
-        raise NotImplementedError(PLANNED)
+    def __post_init__(self):
+        self.inventoryItems: List[InventoryItem] = []   # Inventory "contains" InventoryItem
 
-    def updateInventoryRecord(self, itemID: int, newQuant: int):
-        raise NotImplementedError(PLANNED)
+    def getInventoryList(self, inventoryID: int) -> List[InventoryItem]:
+        """Sequence diagram "View Inventory": get the items from the Inventory Database and
+        return them as the inventory list."""
+        if inventoryID != self.inventoryID:
+            raise ValueError(f"This is inventory {self.inventoryID}, not inventory {inventoryID}.")
+        self.inventoryItems = self.database.getInventoryItems(inventoryID)
+        return self.inventoryItems
+
+    def updateInventoryRecord(self, itemID: int, newQuant: int) -> bool:
+        """Sequence diagram "Update Inventory Item": validate the new quantity with the
+        item, then save it in the Inventory Database. Returns updateConfirmed."""
+        item = self._find_item(itemID)
+        isValid = item.validateQuantity(newQuant)
+        if not isValid:
+            return False
+        saveSuccess = self.database.updateItem(itemID, newQuant)
+        if saveSuccess:
+            item.quantity = newQuant
+            self.lastUpdated = date.today()
+        return saveSuccess
+
+    # ---- helper (not in the class diagram) ------------------------------------------
+
+    def _find_item(self, itemID: int) -> InventoryItem:
+        if not self.inventoryItems:
+            self.getInventoryList(self.inventoryID)
+        for item in self.inventoryItems:
+            if item.itemID == itemID:
+                return item
+        raise ValueError(f"There is no item with ID {itemID} in this store's inventory.")
+
+
+def load_inventory(storeID: int) -> Inventory:
+    """The Inventory of one store, read from the inventories table."""
+    with closing(get_connection()) as conn:
+        row = conn.execute("SELECT inventoryID, lastUpdated FROM inventories WHERE storeID = ?",
+                           (storeID,)).fetchone()
+    if row is None:
+        raise ValueError(f"There is no inventory for store {storeID}.")
+    return Inventory(row["inventoryID"], date.fromisoformat(row["lastUpdated"]))
 
 
 @dataclass

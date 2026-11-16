@@ -9,7 +9,9 @@ BTM 495 team project (Fall 2026). This is a prototype of the to-be system for So
 | 1 | Version control, SQLite database, every class and attribute from the Milestone 3 class diagram | Done |
 | 2 | **Create Reports (UC 06)** works end to end: Sales, Inventory and Customer Loyalty reports, matching the Milestone 4 sequence diagrams | Done |
 | 2 | Every class, attribute and operation matches the final Milestone 4 class diagram (24 classes), with a table for every class that is stored | Done |
-| 2 | Methods of the other use cases: Inventory, Orders, Payments, Promotions, Employee Accounts | In progress, one use case per commit |
+| 2 | **Manage Inventory (UC 04)** works end to end: view the inventory (search, below-minimum filter) and update a quantity, matching the Milestone 4 sequence diagrams | Done |
+| 2 | Sales report adds units sold per menu item and sales per day (`compileSalesFigures`, Milestone 5 method specification) | Done |
+| 2 | Methods of the other use cases: Orders, Payments, Promotions, Employee Accounts | In progress, one use case per commit |
 | 2 | Final sync with the Milestone 5 class diagram | Planned |
 
 Every operation from the class diagram is present with the same name and parameters. The ones not built yet raise *Implemented in an upcoming Prototype 2 commit*.
@@ -19,12 +21,32 @@ Every operation from the class diagram is present with the same name and paramet
 You need Python 3.8 or newer. Nothing else to install: SQLite is built into Python.
 
 ```bash
-python3 main.py             # full demo: rebuilds the database and runs all three reports
-python3 create_reports.py   # interactive menu: pick a report, store and period, then save or export
-python3 database/setup_db.py   # rebuild only the database with the sample data
+python3 main.py               # full demo: rebuilds the database, runs Manage Inventory and all three reports
+python3 manage_inventory.py   # interactive screen: view the inventory and update quantities
+python3 create_reports.py     # interactive menu: pick a report, store and period, then save or export
+python3 database/setup_db.py  # rebuild only the database with the sample data
 ```
 
 Exported reports are written to the `exports/` folder (CSV opens in Excel).
+
+## Manage Inventory (UC 04)
+
+The manager works through the InventoryUI screen. Each action follows its Milestone 4 sequence diagram:
+
+| Step | View Inventory | Update Inventory Item |
+|---|---|---|
+| Manager | `InventoryUI.viewInventoryList()` | `InventoryUI.updateQuantity(itemID, newQuant)` |
+| Inventory | `getInventoryList(inventoryID)` returns the inventory list | `updateInventoryRecord(itemID, newQuant)` returns updateConfirmed |
+| Inventory Item | | `validateQuantity(newQuant)` returns isValid |
+| Inventory Database | `getInventoryItems(inventoryID)` returns the items | `updateItem(itemID, newQuant)` returns saveSuccess |
+| Screen shows | the list (ID, item, quantity, minimum, LOW status) | the confirmation with the old and new quantity |
+
+Business rules used:
+- A new quantity must be a whole number, 0 or more. Anything else is not saved and the screen says so.
+- The screen can search by item name (`searchKeyword`) and show only the items below minimum (`filterCategory = "below minimum"`).
+- Saving a quantity also updates the inventory's `lastUpdated` date, so the Inventory Report shows the new stock right away.
+
+`Store.generateDailySales()` returns the store's sales total for each day that had sales (completed orders only).
 
 ## Create Reports (UC 06)
 
@@ -34,7 +56,7 @@ Each report follows its Milestone 4 sequence diagram, using the same method name
 |---|---|---|---|
 | Manager starts it | `retrieveRecords(startDate, endDate, storeID)` | same | same |
 | Loop | for each order in the period: `Order.calculateTotal(orderID)` | for each item in the store's inventory: `InventoryItem.isBelowMinimum(itemID)` | for each registered customer: `Customer.viewOrderHistory(customerID)` |
-| Compile and calculate | `compileSalesFigures(storeID, startDate, endDate)`, `calculateRevenue(storeID, orderTotals)`, `calculateUnitSold(storeID, orderLines)`, `calculateAverageOrderValue(totalRevenue, numberOfOrders)` | `compileStockLevels(storeID, inventoryItems)`, `identifyLowStockItems(stockLevels)`, `generateRestockRecommendations(lowStockItems)` | `compileLoyaltyData(storeID, startDate, endDate)`, `identifyRepeatCustomers(orderHistory)` |
+| Compile and calculate | `compileSalesFigures(storeID, startDate, endDate)` (order lines, units per menu item, sales per day), `calculateRevenue(storeID, orderTotals)`, `calculateUnitSold(storeID, orderLines)`, `calculateAverageOrderValue(totalRevenue, numberOfOrders)` | `compileStockLevels(storeID, inventoryItems)`, `identifyLowStockItems(stockLevels)`, `generateRestockRecommendations(lowStockItems)` | `compileLoyaltyData(storeID, startDate, endDate)`, `identifyRepeatCustomers(orderHistory)` |
 | Display | `generate(reportID)` | `generate(reportID)` | `generate(reportID)` |
 | Manager saves or exports | `save(reportID)` returns a save confirmation, `export(reportID, format)` returns an export confirmation | same | same |
 
@@ -47,7 +69,8 @@ Business rules used:
 ## Project structure
 
 ```
-main.py                 Demo: builds the database, uses the classes, runs all three reports
+main.py                 Demo: builds the database, uses the classes, runs Manage Inventory and all three reports
+manage_inventory.py     Interactive Manage Inventory screen for the manager
 create_reports.py       Interactive Create Reports menu for the manager
 models/                 Problem-domain classes, one file per use-case area
   people.py             Person (abstract), Customer, Employee, Manager
@@ -105,6 +128,7 @@ Design rules used (Chapter 9, data management layer):
 - **Associations**: one-to-many associations become foreign keys; many-to-many associations get a link table (`customer_promotions`, `sales_report_orders`, `inventory_report_items`, `loyalty_report_customers`).
 - **Controller and interface classes**: OrderHandler and InventoryUI only hold the order or screen being worked on while the app runs, so they have no table.
 - **Data-access classes**: Sales Database keeps its sales and cancellation records in `sales_records` and `cancellation_records`; Inventory Database reads and updates `inventory_items`.
+- **Association references**: where an object needs the object it is linked to, it keeps a reference named after the link: `InventoryUI.inventory` ("represents"), `Inventory.database` ("accesses"), `Report.managerID` ("generates") and `Report.storeID` ("covers").
 - **Derived attribute**: `/duration` of Promotion is calculated from its dates, not stored.
 - **Abstract classes** (Person, Payment, Report) cannot be created directly.
 - **Data-layer columns**, not attributes in the class diagram: `orders.storeID` (where the order was placed, so reports can filter by store) and `orders.customerID` / `orders.employeeID` (in the diagram these links go through the OrderHandler; the order history and reports need them stored).
