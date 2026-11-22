@@ -110,7 +110,7 @@ CREATE TABLE promotions (
     startDate      TEXT NOT NULL,
     endDate        TEXT NOT NULL,
     sharingChannel TEXT,
-    lifecycleState TEXT NOT NULL CHECK (lifecycleState IN ('draft', 'shared', 'expired')),
+    lifeCycleState TEXT NOT NULL CHECK (lifeCycleState IN ('draft', 'shared', 'expired')),
     CHECK (endDate >= startDate)
 );
 

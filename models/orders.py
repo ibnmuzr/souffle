@@ -102,7 +102,7 @@ class Order:
         for line in self.getOrderDetails():
             if (line.menuItem.menuItemID == menuItemID
                     and line.specialInstructions == specialInstructions):
-                line.addLine(menuItemID, quantity)
+                line.addLine(menuItemID, quantity, specialInstructions)
                 break
         else:
             line = OrderLine(0, quantity, specialInstructions, 0.0, orderID=self.orderID)
@@ -262,7 +262,7 @@ class Order:
 
     # ---- Process Payments -------------------------------------------------------------
 
-    def confirmOrder(self, orderID: str, paymentInfo=None) -> bool:
+    def confirmOrder(self, orderID: str, payment=None) -> bool:
         """Sequence diagrams "Pay by Card" and "Pay by Cash": create(total), then
         processPayment(paymentID). Approved: recordSale(orderID) and the order is "Paid".
         Declined: the order is "Declined" and can be paid again."""
@@ -270,13 +270,13 @@ class Order:
         status = self.getStatus(orderID)
         if status not in ("Ready", "Declined"):
             raise ValueError(f"Order {orderID} is {status}: it can be paid once it is Ready.")
-        if paymentInfo is None:
+        if payment is None:
             raise ValueError("Choose how to pay: a CardPayment or a CashPayment.")
         if status == "Declined":
             self.updateStatus(orderID, "Ready")              # pay again
-        paymentInfo.orderID = orderID
-        paymentInfo.create(self.calculateTotal(orderID))
-        approved = paymentInfo.processPayment(paymentInfo.paymentID)
+        payment.orderID = orderID
+        payment.create(self.calculateTotal(orderID))
+        approved = payment.processPayment(payment.paymentID)
         if approved:
             self.recordSale(orderID)
             self.updateStatus(orderID, "Paid")
@@ -382,10 +382,16 @@ class OrderLine:
         self.orderLineID = cursor.lastrowid
         return self
 
-    def addLine(self, menuItemID: int, quantity: int) -> None:
-        """Add more of the same menu item to this line."""
+    def addLine(self, menuItemID: int, quantity: int, specialInstructions: str = "") -> None:
+        """Add more of the same menu item to this line (and its instructions, if any)."""
         if self.menuItem is None or menuItemID != self.menuItem.menuItemID:
             raise ValueError(f"Line {self.orderLineID} is not for menu item {menuItemID}.")
+        if specialInstructions and specialInstructions != self.specialInstructions:
+            self.specialInstructions = specialInstructions
+            with closing(get_connection()) as conn:
+                conn.execute("UPDATE order_lines SET specialInstructions = ? WHERE orderLineID = ?",
+                             (specialInstructions, self.orderLineID))
+                conn.commit()
         self.updateLine(self.orderLineID, self.quantity + quantity)
 
     def removeLine(self, orderLineID: int) -> None:

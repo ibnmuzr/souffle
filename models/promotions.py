@@ -35,7 +35,7 @@ class Promotion:
     startDate: date
     endDate: date
     sharingChannel: str  # email, SMS, social media or website; empty while a draft
-    lifecycleState: str  # "in process", "draft", "shared" or "expired"
+    lifeCycleState: str  # "in process", "draft", "shared" or "expired"
     managerID: Optional[int] = None   # the manager who created it
 
     @property
@@ -50,7 +50,7 @@ class Promotion:
         self.promotionID, self.title = promotionID, title.strip()
         self.discountType, self.discountValue = discountType, discountValue
         self.startDate, self.endDate = startDate, endDate
-        self.creationDate, self.sharingChannel, self.lifecycleState = date.today(), "", "in process"
+        self.creationDate, self.sharingChannel, self.lifeCycleState = date.today(), "", "in process"
         return self
 
     def sharePromotion(self, promotionID: int, sharingChannel: str) -> None:
@@ -59,7 +59,7 @@ class Promotion:
         self._check_id(promotionID)
         if sharingChannel not in SHARING_CHANNELS:
             raise ValueError(f"The channel must be one of: {', '.join(SHARING_CHANNELS)}.")
-        self.sharingChannel, self.lifecycleState = sharingChannel, "shared"
+        self.sharingChannel, self.lifeCycleState = sharingChannel, "shared"
         self._save()
         customers = all_customers()
         with closing(get_connection()) as conn:
@@ -73,7 +73,7 @@ class Promotion:
     def isValid(self, promotionID: int) -> bool:
         """True when the promotion has been shared and today is within its dates."""
         self._check_id(promotionID)
-        return self.lifecycleState == "shared" and self.startDate <= date.today() <= self.endDate
+        return self.lifeCycleState == "shared" and self.startDate <= date.today() <= self.endDate
 
     def trackEngagement(self, promotionID: int) -> int:
         """How many orders used the promotion."""
@@ -85,17 +85,17 @@ class Promotion:
     def saveDraft(self, promotionID: int) -> None:
         """Save the promotion as a draft (not shared, so not valid yet)."""
         self._check_id(promotionID)
-        if self.lifecycleState not in ("in process", "draft"):
+        if self.lifeCycleState not in ("in process", "draft"):
             raise ValueError("Only a new promotion or a draft can be saved as a draft.")
-        self.lifecycleState = "draft"
+        self.lifeCycleState = "draft"
         self._save()
 
     def editDraft(self, promotionID: int, title: Optional[str] = None,
-                  discountType: Optional[str] = None, discountValue: Optional[int] = None,
+                  discountValue: Optional[int] = None, discountType: Optional[str] = None,
                   startDate: Optional[date] = None, endDate: Optional[date] = None) -> None:
         """Change a draft and save it (only drafts can be edited)."""
         self._check_id(promotionID)
-        if self.lifecycleState != "draft":
+        if self.lifeCycleState != "draft":
             raise ValueError("Only a draft can be edited.")
         changed = (title or self.title, discountType or self.discountType,
                    self.discountValue if discountValue is None else discountValue,
@@ -130,7 +130,7 @@ class Promotion:
                          (self.promotionID, self.managerID, self.title, self.discountType,
                           self.discountValue, self.creationDate.isoformat(),
                           self.startDate.isoformat(), self.endDate.isoformat(),
-                          self.sharingChannel or None, self.lifecycleState))
+                          self.sharingChannel or None, self.lifeCycleState))
             conn.commit()
 
     def _check_id(self, promotionID: int) -> None:
@@ -143,7 +143,7 @@ def promotion_from_row(r) -> Promotion:
     return Promotion(r["promotionID"], r["title"], r["discountType"], r["discountValue"],
                      date.fromisoformat(r["creationDate"]), date.fromisoformat(r["startDate"]),
                      date.fromisoformat(r["endDate"]), r["sharingChannel"] or "",
-                     r["lifecycleState"], managerID=r["managerID"])
+                     r["lifeCycleState"], managerID=r["managerID"])
 
 
 def next_promotion_id() -> int:

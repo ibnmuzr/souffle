@@ -59,7 +59,7 @@ INSERT INTO employee_accounts VALUES
   (2, 2, 1, 'alex.martin@example.com',  'manager123', 'active', NULL);
 
 -- promotionID, managerID, title, discountType, discountValue, creationDate, startDate,
--- endDate, sharingChannel, lifecycleState
+-- endDate, sharingChannel, lifeCycleState
 INSERT INTO promotions VALUES
   (1, 1, 'Fall Loyalty Week',   'percentage', 10, '2026-10-15', '2026-10-20', '2026-10-31', 'email',        'expired'),
   (2, 1, 'Holiday Bundle',      'fixed',       5, '2026-11-02', '2026-12-01', '2026-12-24', NULL,           'draft'),

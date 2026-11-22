@@ -187,16 +187,6 @@ class Manager(Person):
             return False
         return True
 
-    def sharePromotion(self, title: str, discountType: str, discountValue: int,
-                       startDate: date, endDate: date, sharingChannel: str = "email") -> None:
-        """Create a promotion and share it with the customers right away."""
-        from .promotions import Promotion, next_promotion_id
-        promotion = Promotion(0, "", "", 0, date.today(), startDate, endDate, "", "",
-                              managerID=self.managerID)
-        promotion.createPromotion(next_promotion_id(), title, discountType, discountValue,
-                                  startDate, endDate)
-        promotion.sharePromotion(promotion.promotionID, sharingChannel)
-
 
 def load_employee(employeeID: int) -> Employee:
     """The employee with this ID, read from the database."""

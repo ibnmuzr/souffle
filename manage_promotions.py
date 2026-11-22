@@ -41,7 +41,7 @@ def list_promotions():
         p = Promotion.getPromotion(promotionID)
         off = f"{p.discountValue}%" if p.discountType == "percentage" else f"${p.discountValue}"
         print(f"  {p.promotionID}  {p.title:<20}{off:>5} off  {p.startDate} to {p.endDate}  "
-              f"{p.lifecycleState:<8} valid now: {'yes' if p.isValid(promotionID) else 'no ':<4}"
+              f"{p.lifeCycleState:<8} valid now: {'yes' if p.isValid(promotionID) else 'no ':<4}"
               f"used by {p.trackEngagement(promotionID)} order(s)")
 
 

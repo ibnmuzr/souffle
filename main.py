@@ -92,12 +92,12 @@ def main():
     print(f"\nCash payment of ${cash.amount:.2f} with ${cash.cashReceived:.2f} received: "
           f"change due ${cash.calculateChange(cash.amount, cash.cashReceived):.2f}")
 
-    print("\nPromotions (lifecycleState, /duration):")
+    print("\nPromotions (lifeCycleState, /duration):")
     for r in conn.execute("SELECT * FROM promotions"):
         promo = Promotion(r["promotionID"], r["title"], r["discountType"], r["discountValue"],
                           d(r["creationDate"]), d(r["startDate"]), d(r["endDate"]),
-                          r["sharingChannel"] or "", r["lifecycleState"])
-        print(f"  {promo.title:<22}{promo.lifecycleState:<9}runs {promo.duration} days")
+                          r["sharingChannel"] or "", r["lifeCycleState"])
+        print(f"  {promo.title:<22}{promo.lifeCycleState:<9}runs {promo.duration} days")
 
     order = order_from_row(conn.execute("SELECT * FROM orders WHERE orderID = 'ORD-0002'").fetchone())
     discount = order.calculateDiscount(order.orderID, order.orderTotal, 3)
@@ -251,11 +251,13 @@ def manage_promotions_demo(manager):
     draft.saveDraft(draft.promotionID)
     draft.editDraft(draft.promotionID, discountValue=25)
     print(f"  Draft #{draft.promotionID} '{draft.title}': {draft.discountValue}% off, "
-          f"{draft.lifecycleState}, valid now: {draft.isValid(draft.promotionID)}")
-    print("  Manager.sharePromotion('Winter Warm-Up', $3 off) by SMS:")
-    manager.sharePromotion("Winter Warm-Up", "fixed", 3, today, today + timedelta(days=30), "SMS")
-    promotion = Promotion.getPromotion(draft.promotionID + 1)
-    print(f"  #{promotion.promotionID} is {promotion.lifecycleState}, valid now: "
+          f"{draft.lifeCycleState}, valid now: {draft.isValid(draft.promotionID)}")
+    print("  createPromotion('Winter Warm-Up', $3 off), then sharePromotion by SMS:")
+    promotion = Promotion(0, "", "", 0, today, today, today, "", "", managerID=manager.managerID)
+    promotion.createPromotion(next_promotion_id(), "Winter Warm-Up", "fixed", 3, today,
+                              today + timedelta(days=30))
+    promotion.sharePromotion(promotion.promotionID, "SMS")
+    print(f"  #{promotion.promotionID} is {promotion.lifeCycleState}, valid now: "
           f"{promotion.isValid(promotion.promotionID)}")
     handler = OrderHandler(customer=load_customer(3), employee=load_employee(1))
     order = handler.startOrder("in-store")
