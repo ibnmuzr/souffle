@@ -11,7 +11,7 @@ from typing import List
 
 from database.connection import get_connection
 from .base import PLANNED
-from .orders import Order, order_from_row
+from .orders import Order, load_order, order_from_row
 
 
 @dataclass
@@ -85,20 +85,30 @@ class Employee(Person):
     def login(self, registerUserName: str, registerPassword: str):
         raise NotImplementedError(PLANNED)
 
-    def notifyCancellation(self, orderID: str):
-        raise NotImplementedError(PLANNED)
+    def notifyCancellation(self, orderID: str) -> None:
+        """Tell the kitchen staff to stop preparing a cancelled order."""
+        print(f"  [{self.firstName}'s screen] Order {orderID} was cancelled: stop preparing it.")
 
-    def displayStatus(self, orderID: str):
-        raise NotImplementedError(PLANNED)
+    def displayStatus(self, orderID: str) -> str:
+        """Show the order's current state."""
+        message = f"Order {orderID}: {load_order(orderID).getStatus(orderID)}"
+        print(f"  [{self.firstName}'s screen] {message}")
+        return message
 
     def displayWaitTime(self, orderID: str, estTime: time) -> time:
-        raise NotImplementedError(PLANNED)
+        """Show the new estimated time the order will be ready."""
+        print(f"  [{self.firstName}'s screen] Order {orderID} will now be ready at "
+              f"{estTime.strftime('%H:%M')}.")
+        return estTime
 
-    def notifyOrderReady(self, orderID: str):
-        raise NotImplementedError(PLANNED)
+    def notifyOrderReady(self, orderID: str) -> None:
+        """Tell the front counter the order is ready for the customer."""
+        print(f"  [{self.firstName}'s screen] Order {orderID} is ready for the customer.")
 
-    def markOrderComplete(self, orderID: str):
-        raise NotImplementedError(PLANNED)
+    def markOrderComplete(self, orderID: str) -> None:
+        """The customer has the order and it is paid: complete it through the OrderHandler."""
+        from .order_handler import OrderHandler
+        OrderHandler(employee=self).markOrderComplete(orderID)
 
     def logout(self):
         raise NotImplementedError(PLANNED)
@@ -113,8 +123,9 @@ class Manager(Person):
     """
     managerID: int
 
-    def requestReason(self, orderID: str):
-        raise NotImplementedError(PLANNED)
+    def requestReason(self, orderID: str) -> str:
+        """The message asking for the reason an order is being cancelled."""
+        return f"Order {orderID} has started: enter the reason and a manager's approval to cancel it."
 
     def createAccount(self, employeeID: int, employeeEmail: str, voidCheque: str,
                       accountPassword: str):
@@ -129,3 +140,37 @@ class Manager(Person):
     def sharePromotion(self, title: str, discountType: str, discountValue: int,
                        startDate: date, endDate: date):
         raise NotImplementedError(PLANNED)
+
+
+def load_employee(employeeID: int) -> Employee:
+    """The employee with this ID, read from the database."""
+    with closing(get_connection()) as conn:
+        r = conn.execute("SELECT p.*, e.* FROM employees e JOIN persons p ON p.personID = e.personID "
+                         "WHERE e.employeeID = ?", (employeeID,)).fetchone()
+    if r is None:
+        raise ValueError(f"There is no employee {employeeID}.")
+    return Employee(r["personID"], r["firstName"], r["lastName"], r["phone"], r["email"],
+                    r["employeeID"], r["registerUserName"], r["registerPassword"],
+                    r["employeeStatus"], date.fromisoformat(r["hireDate"]))
+
+
+def load_manager(managerID: int) -> Manager:
+    """The manager with this ID, read from the database."""
+    with closing(get_connection()) as conn:
+        r = conn.execute("SELECT p.*, m.managerID FROM managers m JOIN persons p "
+                         "ON p.personID = m.personID WHERE m.managerID = ?", (managerID,)).fetchone()
+    if r is None:
+        raise ValueError(f"There is no manager {managerID}.")
+    return Manager(r["personID"], r["firstName"], r["lastName"], r["phone"], r["email"],
+                   r["managerID"])
+
+
+def load_customer(customerID: int) -> Customer:
+    """The customer with this ID, read from the database."""
+    with closing(get_connection()) as conn:
+        r = conn.execute("SELECT p.*, c.customerID FROM customers c JOIN persons p "
+                         "ON p.personID = c.personID WHERE c.customerID = ?", (customerID,)).fetchone()
+    if r is None:
+        raise ValueError(f"There is no customer {customerID}.")
+    return Customer(r["personID"], r["firstName"], r["lastName"], r["phone"], r["email"],
+                    r["customerID"])

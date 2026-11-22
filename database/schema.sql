@@ -125,7 +125,8 @@ CREATE TABLE customer_promotions (
 -- The customer, employee and store of an order are kept as foreign keys so the
 -- order history, the Sales Report and the Customer Loyalty Report can find them
 -- (in the class diagram these links go through the OrderHandler).
---   storeID is a data-layer column: it is not an attribute in the class diagram.
+--   storeID and discountAmount are data-layer columns: they are not attributes in
+--   the class diagram.
 CREATE TABLE orders (
     orderID     TEXT PRIMARY KEY,
     customerID  INTEGER REFERENCES customers(customerID),
@@ -136,7 +137,8 @@ CREATE TABLE orders (
     orderDate   TEXT NOT NULL,
     orderType   TEXT NOT NULL,
     orderTotal  REAL NOT NULL DEFAULT 0 CHECK (orderTotal >= 0),
-    orderStatus TEXT NOT NULL
+    orderStatus TEXT NOT NULL,      -- a state of the order state machine (Milestone 4)
+    discountAmount REAL NOT NULL DEFAULT 0 CHECK (discountAmount >= 0)  -- from the promotion
 );
 
 -- Order "contains" OrderLine (aggregation, 1..*); OrderLine "refers to" MenuItem (many to 1)

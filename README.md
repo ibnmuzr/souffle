@@ -11,7 +11,8 @@ BTM 495 team project (Fall 2026). This is a prototype of the to-be system for So
 | 2 | Every class, attribute and operation matches the final Milestone 4 class diagram (24 classes), with a table for every class that is stored | Done |
 | 2 | **Manage Inventory (UC 04)** works end to end: view the inventory (search, below-minimum filter) and update a quantity, matching the Milestone 4 sequence diagrams | Done |
 | 2 | Sales report adds units sold per menu item and sales per day (`compileSalesFigures`, Milestone 5 method specification) | Done |
-| 2 | Methods of the other use cases: Orders, Payments, Promotions, Employee Accounts | In progress, one use case per commit |
+| 2 | **Manage Orders (UC 01)** works end to end: create and submit, modify, cancel (manager approval once the kitchen has started), track and complete. Order states follow the Milestone 4 order state machine; `approveCancellation` and `calculateDiscount` follow the Milestone 5 method specifications | Done |
+| 2 | Methods of the other use cases: Payments, Promotions, Employee Accounts | In progress |
 | 2 | Final sync with the Milestone 5 class diagram | Planned |
 
 Every operation from the class diagram is present with the same name and parameters. The ones not built yet raise *Implemented in an upcoming Prototype 2 commit*.
@@ -21,13 +22,35 @@ Every operation from the class diagram is present with the same name and paramet
 You need Python 3.8 or newer. Nothing else to install: SQLite is built into Python.
 
 ```bash
-python3 main.py               # full demo: rebuilds the database, runs Manage Inventory and all three reports
+python3 main.py               # full demo: rebuilds the database, runs Manage Orders, Manage Inventory and all three reports
+python3 manage_orders.py      # interactive screen: create, modify, cancel, track and complete orders
 python3 manage_inventory.py   # interactive screen: view the inventory and update quantities
 python3 create_reports.py     # interactive menu: pick a report, store and period, then save or export
 python3 database/setup_db.py  # rebuild only the database with the sample data
 ```
 
 Exported reports are written to the `exports/` folder (CSV opens in Excel).
+
+## Manage Orders (UC 01)
+
+The employee works through the OrderHandler controller. Each action follows its Milestone 4 sequence diagram:
+
+| Action | OrderHandler | What happens |
+|---|---|---|
+| Create and submit | `startOrder(orderType)`, then for each item `checkAvailability` and `Order.addItem`, `reviewOrder(orderID)`, `submitOrder(orderID)` | `createOrder`, `createOrderLine`, `calculateTotal`, `sendToKitchen` returns the estimated ready time |
+| Promotion | `applyPromotion(promotionID)` (Milestone 5 Manage Promotions diagram) | `Order.calculateDiscount(orderID, orderTotal, promotionID)`: an invalid promotion gives 0 |
+| Modify | `selectOrder(orderID)`, `modifyOrder(orderID, changes)`, `confirmChanges(orderID)` | `getOrderDetails`, `updateItems` (add, remove or modify lines), `saveChanges` |
+| Cancel | `selectOrder`, `enterReason(reason)`, `cancelOrder(orderID)`, `approveCancellation(orderID, managerID, accountPassword)` | not started: cancelled right away; started: the manager approves, a paid order is refunded, `notifyCancellation`, `logCancellation` |
+| Track and complete | `startPreparation`, `requestRemake`, `markReady`, `markOrderComplete` | `updateStatus`, `displayStatus`, `updateWaitTime`, `displayWaitTime`, `notifyOrderReady`, `recordOrder` |
+
+Order states (Milestone 4 order state machine): In process → Entered → Ordered → Sent → In progress → Ready → Paid → Completed. A declined payment moves Ready → Declined (pay again to go back). Any order that is not Completed can be Cancelled.
+
+Business rules used:
+- Items can only change before the kitchen starts (In process, Entered, Ordered or Sent).
+- Cancelling an order the kitchen has not started needs no manager. Once it has started (In progress, Ready, Paid or Declined), a manager must approve with their ID and password (Milestone 5 method specification 02). A paid order is refunded.
+- An order can only be completed once it is paid.
+
+Sample logins: employee Sam (`sam.t` / `changeme`), manager Alex (manager ID 1, password `manager123`).
 
 ## Manage Inventory (UC 04)
 
@@ -69,7 +92,8 @@ Business rules used:
 ## Project structure
 
 ```
-main.py                 Demo: builds the database, uses the classes, runs Manage Inventory and all three reports
+main.py                 Demo: builds the database, uses the classes, runs every use case built so far
+manage_orders.py        Interactive Manage Orders screen for the employee
 manage_inventory.py     Interactive Manage Inventory screen for the manager
 create_reports.py       Interactive Create Reports menu for the manager
 models/                 Problem-domain classes, one file per use-case area
@@ -131,7 +155,7 @@ Design rules used (Chapter 9, data management layer):
 - **Association references**: where an object needs the object it is linked to, it keeps a reference named after the link: `InventoryUI.inventory` ("represents"), `Inventory.database` ("accesses"), `Report.managerID` ("generates") and `Report.storeID` ("covers").
 - **Derived attribute**: `/duration` of Promotion is calculated from its dates, not stored.
 - **Abstract classes** (Person, Payment, Report) cannot be created directly.
-- **Data-layer columns**, not attributes in the class diagram: `orders.storeID` (where the order was placed, so reports can filter by store) and `orders.customerID` / `orders.employeeID` (in the diagram these links go through the OrderHandler; the order history and reports need them stored).
+- **Data-layer columns**, not attributes in the class diagram: `orders.storeID` (where the order was placed, so reports can filter by store), `orders.customerID` / `orders.employeeID` (in the diagram these links go through the OrderHandler; the order history and reports need them stored) and `orders.discountAmount` (the discount the promotion gave).
 
 Sample menu items and prices come from Soufflé's Clover item list; people and orders in the sample data are fictional.
 

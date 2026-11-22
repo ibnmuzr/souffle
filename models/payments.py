@@ -1,9 +1,12 @@
 """Payments (Process Payments use case): Payment (abstract), CardPayment, CashPayment, Receipt."""
 from __future__ import annotations
 
+from contextlib import closing
 from dataclasses import dataclass
 from datetime import date
+from typing import Optional
 
+from database.connection import get_connection
 from .base import PLANNED
 
 
@@ -34,7 +37,15 @@ class Payment:
         return paymentID == self.paymentID and self.amount > 0
 
     def refundPayment(self, paymentID: int) -> bool:
-        raise NotImplementedError(PLANNED)
+        """Give the money back for an approved payment. False if it was not approved."""
+        if paymentID != self.paymentID or self.status.lower() != "approved":
+            return False
+        self.status = "Refunded"
+        with closing(get_connection()) as conn:
+            conn.execute("UPDATE payments SET status = ? WHERE paymentID = ?",
+                         (self.status, paymentID))
+            conn.commit()
+        return True
 
 
 @dataclass
@@ -70,3 +81,20 @@ class Receipt:
 
     def printReceipt(self, orderID: str, paymentID: int) -> None:
         raise NotImplementedError(PLANNED)
+
+
+def payment_of_order(orderID: str) -> Optional[Payment]:
+    """The approved card or cash payment of an order, or None."""
+    with closing(get_connection()) as conn:
+        r = conn.execute(
+            "SELECT p.*, c.cardType, c.authorizationCode, h.cashReceived, h.changeDue "
+            "FROM payments p LEFT JOIN card_payments c ON c.paymentID = p.paymentID "
+            "LEFT JOIN cash_payments h ON h.paymentID = p.paymentID "
+            "WHERE p.orderID = ? AND LOWER(p.status) = 'approved'", (orderID,)).fetchone()
+    if r is None:
+        return None
+    common = (r["paymentID"], r["amount"], r["method"], date.fromisoformat(r["paymentDate"]),
+              r["status"])
+    if r["method"] == "card":
+        return CardPayment(*common, r["cardType"], r["authorizationCode"] or "")
+    return CashPayment(*common, r["cashReceived"], r["changeDue"])

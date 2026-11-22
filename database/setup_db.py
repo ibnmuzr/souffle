@@ -47,35 +47,44 @@ INSERT INTO persons VALUES
   (5, 'Marc',   'Gagnon',   '514-555-0105', 'marc.gagnon@example.com'),
   (6, 'Emma',   'Roy',      '514-555-0106', 'emma.roy@example.com');
 
+-- Alex is the manager and is also on staff (employee 2), so Alex has an account too
 INSERT INTO managers  VALUES (1, 1);
-INSERT INTO employees VALUES (1, 2, 'sam.t', 'changeme', 'active', '2026-05-01');
+INSERT INTO employees VALUES
+  (1, 2, 'sam.t',  'changeme',   'active', '2026-05-01'),
+  (2, 1, 'alex.m', 'manager123', 'active', '2025-01-10');
 INSERT INTO customers VALUES (1, 3), (2, 4), (3, 5), (4, 6);
 
 INSERT INTO employee_accounts VALUES
-  (1, 1, 1, 'sam.tremblay@example.com', 'changeme', 'active', 'uploads/void_cheque_1.pdf');
+  (1, 1, 1, 'sam.tremblay@example.com', 'changeme',   'active', 'uploads/void_cheque_1.pdf'),
+  (2, 2, 1, 'alex.martin@example.com',  'manager123', 'active', NULL);
 
 -- promotionID, managerID, title, discountType, discountValue, creationDate, startDate,
 -- endDate, sharingChannel, lifecycleState
 INSERT INTO promotions VALUES
   (1, 1, 'Fall Loyalty Week',   'percentage', 10, '2026-10-15', '2026-10-20', '2026-10-31', 'email',        'expired'),
   (2, 1, 'Holiday Bundle',      'fixed',       5, '2026-11-02', '2026-12-01', '2026-12-24', NULL,           'draft'),
-  (3, 1, 'November Latte Days', 'percentage', 15, '2026-10-30', '2026-11-01', '2026-11-30', 'social media', 'shared');
+  (3, 1, 'Fall Latte Days',     'percentage', 15, '2026-10-30', '2026-11-01', '2026-12-31', 'social media', 'shared');
 INSERT INTO customer_promotions VALUES (1, 1), (2, 3), (4, 3);
 
--- orderID, customerID (NULL = walk-in), employeeID, storeID, promotionID, orderLine,
--- orderDate, orderType, orderTotal, orderStatus
-INSERT INTO orders VALUES
-  ('ORD-0001', 1,    1, 1, NULL, 2, '2026-10-22', 'in-store', 19.48, 'completed'),
-  ('ORD-0002', 2,    1, 1, NULL, 2, '2026-10-25', 'in-store', 33.97, 'completed'),
-  ('ORD-0003', 1,    1, 1, NULL, 2, '2026-10-29', 'takeout',  30.95, 'completed'),
-  ('ORD-0004', NULL, 1, 1, NULL, 2, '2026-11-02', 'in-store', 22.97, 'completed'),
-  ('ORD-0005', 2,    1, 1, NULL, 1, '2026-11-04', 'in-store', 31.98, 'completed'),
-  ('ORD-0006', 3,    1, 1, NULL, 2, '2026-11-05', 'takeout',  14.47, 'completed'),
-  ('ORD-0007', 1,    1, 1, NULL, 1, '2026-11-05', 'in-store', 24.99, 'cancelled'),
-  ('ORD-0008', 4,    1, 2, NULL, 2, '2026-10-24', 'in-store', 20.48, 'completed'),
-  ('ORD-0009', NULL, 1, 2, NULL, 2, '2026-10-30', 'takeout',  11.48, 'completed'),
-  ('ORD-0010', 4,    1, 2, NULL, 2, '2026-11-03', 'in-store', 34.97, 'completed'),
-  ('ORD-0011', 2,    1, 2, NULL, 1, '2026-11-04', 'takeout',   7.99, 'completed');
+-- orderStatus uses the states of the order state machine (Milestone 4).
+-- ORD-0012 to ORD-0015 are still open, so they show the Track and Complete steps.
+INSERT INTO orders (orderID, customerID, employeeID, storeID, promotionID, orderLine,
+                    orderDate, orderType, orderTotal, orderStatus) VALUES
+  ('ORD-0001', 1,    1, 1, NULL, 2, '2026-10-22', 'in-store', 19.48, 'Completed'),
+  ('ORD-0002', 2,    1, 1, NULL, 2, '2026-10-25', 'in-store', 33.97, 'Completed'),
+  ('ORD-0003', 1,    1, 1, NULL, 2, '2026-10-29', 'takeout',  30.95, 'Completed'),
+  ('ORD-0004', NULL, 1, 1, NULL, 2, '2026-11-02', 'in-store', 22.97, 'Completed'),
+  ('ORD-0005', 2,    1, 1, NULL, 1, '2026-11-04', 'in-store', 31.98, 'Completed'),
+  ('ORD-0006', 3,    1, 1, NULL, 2, '2026-11-05', 'takeout',  14.47, 'Completed'),
+  ('ORD-0007', 1,    1, 1, NULL, 1, '2026-11-05', 'in-store', 24.99, 'Cancelled'),
+  ('ORD-0008', 4,    1, 2, NULL, 2, '2026-10-24', 'in-store', 20.48, 'Completed'),
+  ('ORD-0009', NULL, 1, 2, NULL, 2, '2026-10-30', 'takeout',  11.48, 'Completed'),
+  ('ORD-0010', 4,    1, 2, NULL, 2, '2026-11-03', 'in-store', 34.97, 'Completed'),
+  ('ORD-0011', 2,    1, 2, NULL, 1, '2026-11-04', 'takeout',   7.99, 'Completed'),
+  ('ORD-0012', 3,    1, 1, NULL, 2, '2026-11-21', 'takeout',  13.97, 'Sent'),
+  ('ORD-0013', 4,    1, 1, NULL, 1, '2026-11-21', 'in-store', 15.99, 'Ready'),
+  ('ORD-0014', NULL, 1, 1, NULL, 1, '2026-11-21', 'in-store', 24.99, 'Paid'),
+  ('ORD-0015', 1,    1, 1, NULL, 1, '2026-11-21', 'takeout',  31.98, 'Paid');
 
 -- orderLineID, orderID, menuItemID, quantity, specialInstructions, lineTotal
 INSERT INTO order_lines VALUES
@@ -97,22 +106,31 @@ INSERT INTO order_lines VALUES
   (16, 'ORD-0009', 5, 1, NULL,                  3.49),
   (17, 'ORD-0010', 3, 1, NULL,                 24.99),
   (18, 'ORD-0010', 4, 2, NULL,                  9.98),
-  (19, 'ORD-0011', 1, 1, NULL,                  7.99);
+  (19, 'ORD-0011', 1, 1, NULL,                  7.99),
+  (20, 'ORD-0012', 6, 2, NULL,                  8.98),
+  (21, 'ORD-0012', 4, 1, NULL,                  4.99),
+  (22, 'ORD-0013', 2, 1, 'Write "Happy Birthday"', 15.99),
+  (23, 'ORD-0014', 3, 1, NULL,                 24.99),
+  (24, 'ORD-0015', 2, 2, NULL,                 31.98);
 
--- Sales Database records: every completed order is a sale; ORD-0007 was cancelled
+-- Sales Database records: every paid or completed order is a sale; ORD-0007 was cancelled
 INSERT INTO sales_records (orderID, recordedDate, amount)
-  SELECT orderID, orderDate, orderTotal FROM orders WHERE orderStatus = 'completed';
+  SELECT orderID, orderDate, orderTotal FROM orders WHERE orderStatus IN ('Completed', 'Paid');
 INSERT INTO cancellation_records VALUES
   ('ORD-0007', 'Customer changed their mind', NULL, '2026-11-05');
 
 INSERT INTO payments VALUES
-  (1, 'ORD-0001', 19.48, 'cash', '2026-10-22', 'approved'),
-  (2, 'ORD-0002', 33.97, 'card', '2026-10-25', 'approved');
-INSERT INTO cash_payments VALUES (1, 20.00, 0.52);
-INSERT INTO card_payments VALUES (2, 'debit', 'AUTH-48213');
+  (1, 'ORD-0001', 19.48, 'cash', '2026-10-22', 'Approved'),
+  (2, 'ORD-0002', 33.97, 'card', '2026-10-25', 'Approved'),
+  (3, 'ORD-0014', 24.99, 'cash', '2026-11-21', 'Approved'),
+  (4, 'ORD-0015', 31.98, 'card', '2026-11-21', 'Approved');
+INSERT INTO cash_payments VALUES (1, 20.00, 0.52), (3, 30.00, 5.01);
+INSERT INTO card_payments VALUES (2, 'debit', 'AUTH-48213'), (4, 'credit', 'AUTH-51907');
 INSERT INTO receipts VALUES
   ('R-0001', 1, 19.48, '2026-10-22'),
-  ('R-0002', 2, 33.97, '2026-10-25');
+  ('R-0002', 2, 33.97, '2026-10-25'),
+  ('R-0003', 3, 24.99, '2026-11-21'),
+  ('R-0004', 4, 31.98, '2026-11-21');
 
 INSERT INTO reports VALUES
   (1, 1, 1, '2026-10-01', '2026-10-22', '2026-10-22', 'PDF'),

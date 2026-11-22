@@ -5,9 +5,12 @@ being split into separate draft and shared classes.
 """
 from __future__ import annotations
 
+from contextlib import closing
 from dataclasses import dataclass
 from datetime import date
+from typing import Optional
 
+from database.connection import get_connection
 from .base import PLANNED
 
 
@@ -42,9 +45,7 @@ class Promotion:
 
     def isValid(self, promotionID: int) -> bool:
         """True when the promotion has been shared and today is within its dates."""
-        if promotionID != self.promotionID:
-            raise ValueError(f"isValid was called with promotion {promotionID} "
-                             f"on promotion {self.promotionID}.")
+        self._check_id(promotionID)
         return self.lifecycleState == "shared" and self.startDate <= date.today() <= self.endDate
 
     def trackEngagement(self, promotionID: int):
@@ -55,3 +56,33 @@ class Promotion:
 
     def editDraft(self, promotionID: int) -> None:
         raise NotImplementedError(PLANNED)
+
+    @classmethod
+    def getPromotion(cls, promotionID: int) -> Optional[Promotion]:
+        """The promotion with this ID, read from the database (None if there is none)."""
+        with closing(get_connection()) as conn:
+            r = conn.execute("SELECT * FROM promotions WHERE promotionID = ?",
+                             (promotionID,)).fetchone()
+        return None if r is None else promotion_from_row(r)
+
+    def getDiscountType(self, promotionID: int) -> str:
+        """"percentage" or "fixed"."""
+        self._check_id(promotionID)
+        return self.discountType
+
+    def getDiscountValue(self, promotionID: int) -> int:
+        """The percentage off, or the number of dollars off."""
+        self._check_id(promotionID)
+        return self.discountValue
+
+    def _check_id(self, promotionID: int) -> None:
+        if promotionID != self.promotionID:
+            raise ValueError(f"This is promotion {self.promotionID}, not promotion {promotionID}.")
+
+
+def promotion_from_row(r) -> Promotion:
+    """Build a Promotion object from a row of the promotions table."""
+    return Promotion(r["promotionID"], r["title"], r["discountType"], r["discountValue"],
+                     date.fromisoformat(r["creationDate"]), date.fromisoformat(r["startDate"]),
+                     date.fromisoformat(r["endDate"]), r["sharingChannel"] or "",
+                     r["lifecycleState"])

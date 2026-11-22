@@ -213,24 +213,22 @@ class SalesReport(Report):
         return True
 
     def compileSalesFigures(self, storeID: int, startDate: date, endDate: date) -> None:
-        """Compile the sales figures of the store's completed orders in the period:
-        the order lines (for the units sold), the units sold per menu item and the
-        sales per day."""
-        order_ids = [row["orderID"] for row in self._completed_orders(storeID, startDate, endDate)]
+        """Method specification 04 (Milestone 5): compile the sales figures of the store's
+        completed orders in the period: the order lines (for the units sold), the units
+        sold per menu item and the sales per day."""
         self.orderLines, self.unitsByItem, self.salesByDay = [], {}, {}
-        if not order_ids:
-            return
-        marks = ", ".join("?" * len(order_ids))
-        rows = _rows(f"SELECT l.orderID, l.quantity, m.name FROM order_lines l "
-                     f"JOIN menu_items m ON m.menuItemID = l.menuItemID "
-                     f"WHERE l.orderID IN ({marks}) ORDER BY l.orderID, l.orderLineID", order_ids)
-        for row in rows:
-            self.orderLines.append((row["orderID"], row["quantity"]))
-            self.unitsByItem[row["name"]] = self.unitsByItem.get(row["name"], 0) + row["quantity"]
-        self.unitsByItem = dict(sorted(self.unitsByItem.items(), key=lambda pair: -pair[1]))
-        for order in self.orders:
+        # orders = the completed orders of storeID between startDate and endDate
+        orders = [o for o in self.orders
+                  if o.storeID == storeID and startDate <= o.orderDate <= endDate]
+        for order in orders:
+            lines = order.getOrderDetails()
+            for line in lines:
+                self.orderLines.append((order.orderID, line.quantity))
+                name = line.menuItem.name
+                self.unitsByItem[name] = self.unitsByItem.get(name, 0) + line.quantity
             day_total = self.salesByDay.get(order.orderDate, 0.0) + self.orderTotals[order.orderID]
             self.salesByDay[order.orderDate] = round(day_total, 2)
+        self.unitsByItem = dict(sorted(self.unitsByItem.items(), key=lambda pair: -pair[1]))
 
     def calculateRevenue(self, storeID: int, orderTotals: list) -> float:
         self.totalRevenue = round(sum(orderTotals, 0.0), 2)
