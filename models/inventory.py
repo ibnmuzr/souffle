@@ -8,7 +8,7 @@ from __future__ import annotations
 from contextlib import closing
 from dataclasses import dataclass, field
 from datetime import date
-from typing import Dict, List, Optional
+from typing import List
 
 from database.connection import get_connection
 from .inventory_database import InventoryDatabase
@@ -24,19 +24,17 @@ class Store:
     storeName: str
     address: str
 
-    def generateDailySales(self) -> Dict[date, float]:
-        """Total sales of this store for each day that had sales, oldest day first.
-
-        Uses the Sales Database records (completed orders only; cancelled orders are not
-        sales). Also used by the Sales Report for its sales-per-day table.
-        """
-        with closing(get_connection()) as conn:
-            rows = conn.execute(
-                "SELECT s.recordedDate AS day, ROUND(SUM(s.amount), 2) AS total "
-                "FROM sales_records s JOIN orders o ON o.orderID = s.orderID "
-                "WHERE o.storeID = ? GROUP BY s.recordedDate ORDER BY s.recordedDate",
-                (self.storeID,)).fetchall()
-        return {date.fromisoformat(r["day"]): r["total"] for r in rows}
+    def generateDailySales(self, storeID: int):
+        """Today's Sales Report for this store (completed orders of the day). It is
+        displayed and returned; the manager can then save or export it."""
+        from .reports import SalesReport, next_report_id   # imported here: reports imports this module
+        if storeID != self.storeID:
+            raise ValueError(f"This is store {self.storeID}, not store {storeID}.")
+        today = date.today()
+        report = SalesReport(next_report_id(), today, today, today, "CSV", storeID=storeID)
+        if not report.retrieveRecords(today, today, storeID):
+            print(f"No completed orders at {self.storeName} today.")
+        return report
 
 
 @dataclass
@@ -49,38 +47,37 @@ class Inventory:
     inventoryID: int
     lastUpdated: date
     # Association from the class diagram: Inventory "accesses" Inventory Database
-    database: InventoryDatabase = field(default_factory=lambda: InventoryDatabase(1))
-
-    def __post_init__(self):
-        self.inventoryItems: List[InventoryItem] = []   # Inventory "contains" InventoryItem
+    inventoryDatabase: InventoryDatabase = field(default_factory=lambda: InventoryDatabase(1))
+    # Association from the class diagram: Inventory "contains" InventoryItem
+    items: List[InventoryItem] = field(default_factory=list)
 
     def getInventoryList(self, inventoryID: int) -> List[InventoryItem]:
         """Sequence diagram "View Inventory": get the items from the Inventory Database and
         return them as the inventory list."""
         if inventoryID != self.inventoryID:
             raise ValueError(f"This is inventory {self.inventoryID}, not inventory {inventoryID}.")
-        self.inventoryItems = self.database.getInventoryItems(inventoryID)
-        return self.inventoryItems
+        self.items = self.inventoryDatabase.getInventoryItems(inventoryID)
+        return self.items
 
-    def updateInventoryRecord(self, itemID: int, newQuant: int) -> bool:
+    def updateInventoryRecord(self, itemID: int, newQuantity: int) -> bool:
         """Sequence diagram "Update Inventory Item": validate the new quantity with the
         item, then save it in the Inventory Database. Returns updateConfirmed."""
         item = self._find_item(itemID)
-        isValid = item.validateQuantity(newQuant)
+        isValid = item.validateQuantity(newQuantity)
         if not isValid:
             return False
-        saveSuccess = self.database.updateItem(itemID, newQuant)
+        saveSuccess = self.inventoryDatabase.updateItem(itemID, newQuantity)
         if saveSuccess:
-            item.quantity = newQuant
+            item.quantity = newQuantity
             self.lastUpdated = date.today()
         return saveSuccess
 
     # ---- helper (not in the class diagram) ------------------------------------------
 
     def _find_item(self, itemID: int) -> InventoryItem:
-        if not self.inventoryItems:
+        if not self.items:
             self.getInventoryList(self.inventoryID)
-        for item in self.inventoryItems:
+        for item in self.items:
             if item.itemID == itemID:
                 return item
         raise ValueError(f"There is no item with ID {itemID} in this store's inventory.")
@@ -108,9 +105,9 @@ class InventoryItem:
     quantity: int
     minimumQuantity: int
 
-    def validateQuantity(self, newQuant: int) -> bool:
+    def validateQuantity(self, newQuantity: int) -> bool:
         """A quantity is valid when it is a whole number that is not negative."""
-        return isinstance(newQuant, int) and not isinstance(newQuant, bool) and newQuant >= 0
+        return isinstance(newQuantity, int) and not isinstance(newQuantity, bool) and newQuantity >= 0
 
     def isBelowMinimum(self, itemID: int) -> bool:
         """True when the item's quantity is under its minimum quantity.

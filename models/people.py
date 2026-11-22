@@ -1,6 +1,6 @@
 """People in the Soufflé system: Person (abstract), Customer, Employee, Manager.
 
-Attributes and operations follow the final Milestone 4 class diagram.
+Attributes and operations follow the Milestone 5 implementation class diagram.
 """
 from __future__ import annotations
 

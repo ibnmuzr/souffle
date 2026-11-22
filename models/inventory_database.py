@@ -30,11 +30,11 @@ class InventoryDatabase:
         return [InventoryItem(r["itemID"], r["itemName"], r["quantity"], r["minimumQuantity"])
                 for r in rows]
 
-    def updateItem(self, itemID: int, newQuant: int) -> bool:
+    def updateItem(self, itemID: int, newQuantity: int) -> bool:
         """Save the new quantity of an item (sequence diagram: -> saveSuccess)."""
         with closing(get_connection()) as conn:
             saved = conn.execute("UPDATE inventory_items SET quantity = ? WHERE itemID = ?",
-                                 (newQuant, itemID)).rowcount == 1
+                                 (newQuantity, itemID)).rowcount == 1
             if saved:
                 conn.execute(
                     "UPDATE inventories SET lastUpdated = ? WHERE inventoryID = "

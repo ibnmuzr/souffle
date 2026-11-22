@@ -5,13 +5,13 @@ attributes describe what is on the screen right now, so they live in memory whil
 app runs and are not stored in their own table.
 
 Sequence diagrams (Milestone 4, Manage Inventory):
-    aManager -> viewInventoryList()          -> Inventory.getInventoryList(inventoryID)
+    aManager -> viewInventory()          -> Inventory.getInventoryList(inventoryID)
                                              -> InventoryDatabase.getInventoryItems(inventoryID)
                 <- displayInventoryList(inventoryList)
-    aManager -> updateQuantity(itemID, newQuant)
-                                             -> Inventory.updateInventoryRecord(itemID, newQuant)
-                                             -> InventoryItem.validateQuantity(newQuant)
-                                             -> InventoryDatabase.updateItem(itemID, newQuant)
+    aManager -> updateQuantity(itemID, newQuantity)
+                                             -> Inventory.updateInventoryRecord(itemID, newQuantity)
+                                             -> InventoryItem.validateQuantity(newQuantity)
+                                             -> InventoryDatabase.updateItem(itemID, newQuantity)
                 <- displayUpdateConfirmation()
 """
 from __future__ import annotations
@@ -35,7 +35,7 @@ class InventoryUI:
     # Association from the class diagram: InventoryUI "represents" Inventory
     inventory: Optional[Inventory] = None
 
-    def viewInventoryList(self) -> list:
+    def viewInventory(self) -> list:
         """Show the inventory list, using the search keyword and filter on screen."""
         inventoryList = self.inventory.getInventoryList(self.inventory.inventoryID)
         keyword = self.searchKeyword.strip().lower()
@@ -49,14 +49,14 @@ class InventoryUI:
         self._display_inventory_list(self.displayedItems)
         return self.displayedItems
 
-    def updateQuantity(self, itemID: int, newQuant: int) -> bool:
+    def updateQuantity(self, itemID: int, newQuantity: int) -> bool:
         """Save a new quantity for one item and show the result to the manager.
 
         Returns True when the update was confirmed (valid quantity, saved in the database).
         """
         item = self.inventory._find_item(itemID)
         oldQuant = item.quantity
-        updateConfirmed = self.inventory.updateInventoryRecord(itemID, newQuant)
+        updateConfirmed = self.inventory.updateInventoryRecord(itemID, newQuantity)
         if updateConfirmed:
             self.lastUpdated = self.inventory.lastUpdated
             self._display_update_confirmation(item, oldQuant)

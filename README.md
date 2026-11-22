@@ -15,22 +15,21 @@ BTM 495 team project (Fall 2026). This is a prototype of the to-be system for So
 | 2 | **Process Payments (UC 02)**: card and cash, declined payments (card not authorized, not enough cash), receipts, refunds, following the Milestone 5 method specification 01 | Done |
 | 2 | **Manage Employee Accounts (UC 03)** and **Manage Promotions (UC 05)**: create, validate (invalid information is refused), modify, delete accounts; create, save and edit drafts, share, validate and track promotions | Done |
 | 2 | Every operation of every class is implemented | Done |
-| 2 | Final sync with the Milestone 5 class diagram | Planned |
+| 2 | Names and signatures match the **Milestone 5 implementation class diagram**; one main menu (`app.py`) opens every screen | Done |
 
-Every operation from the class diagram is present with the same name and parameters, and all of them are implemented.
+Every operation in the Milestone 5 class diagram is in the code with the same name and parameters, and all of them are implemented.
 
 ## How to run
 
 You need Python 3.8 or newer. Nothing else to install: SQLite is built into Python.
 
 ```bash
-python3 main.py               # full demo: rebuilds the database, runs Manage Orders, Manage Inventory and all three reports
-python3 manage_orders.py      # interactive screen: create, modify, cancel, track and complete orders
-python3 process_payments.py   # interactive screen: pay a Ready order by card or cash
-python3 manage_inventory.py   # interactive screen: view the inventory and update quantities
-python3 create_reports.py     # interactive menu: pick a report, store and period, then save or export
+python3 app.py                # main menu: opens the screen of every use case
+python3 main.py               # full demo: rebuilds the database and runs all six use cases
 python3 database/setup_db.py  # rebuild only the database with the sample data
 ```
+
+Each screen can also be run on its own: `manage_orders.py`, `process_payments.py`, `manage_accounts.py`, `manage_inventory.py`, `manage_promotions.py`, `create_reports.py`.
 
 Exported reports are written to the `exports/` folder (CSV opens in Excel).
 
@@ -84,10 +83,10 @@ The manager works through the InventoryUI screen. Each action follows its Milest
 
 | Step | View Inventory | Update Inventory Item |
 |---|---|---|
-| Manager | `InventoryUI.viewInventoryList()` | `InventoryUI.updateQuantity(itemID, newQuant)` |
-| Inventory | `getInventoryList(inventoryID)` returns the inventory list | `updateInventoryRecord(itemID, newQuant)` returns updateConfirmed |
-| Inventory Item | | `validateQuantity(newQuant)` returns isValid |
-| Inventory Database | `getInventoryItems(inventoryID)` returns the items | `updateItem(itemID, newQuant)` returns saveSuccess |
+| Manager | `InventoryUI.viewInventory()` | `InventoryUI.updateQuantity(itemID, newQuantity)` |
+| Inventory | `getInventoryList(inventoryID)` returns the inventory list | `updateInventoryRecord(itemID, newQuantity)` returns updateConfirmed |
+| Inventory Item | | `validateQuantity(newQuantity)` returns isValid |
+| Inventory Database | `getInventoryItems(inventoryID)` returns the items | `updateItem(itemID, newQuantity)` returns saveSuccess |
 | Screen shows | the list (ID, item, quantity, minimum, LOW status) | the confirmation with the old and new quantity |
 
 Business rules used:
@@ -95,7 +94,7 @@ Business rules used:
 - The screen can search by item name (`searchKeyword`) and show only the items below minimum (`filterCategory = "below minimum"`).
 - Saving a quantity also updates the inventory's `lastUpdated` date, so the Inventory Report shows the new stock right away.
 
-`Store.generateDailySales()` returns the store's sales total for each day that had sales (completed orders only).
+`Store.generateDailySales(storeID)` returns today's Sales Report for the store (completed orders of the day).
 
 ## Create Reports (UC 06)
 
@@ -120,21 +119,24 @@ Business rules used:
 ```
 main.py                 Demo: builds the database, uses the classes, runs every use case
 manage_orders.py        Interactive Manage Orders screen for the employee
+app.py                  Main menu: opens every screen below
 process_payments.py     Interactive Process Payments screen at the counter
+manage_accounts.py      Interactive Manage Employee Accounts screen for the manager
+manage_promotions.py    Interactive Manage Promotions screen for the manager
 manage_inventory.py     Interactive Manage Inventory screen for the manager
 create_reports.py       Interactive Create Reports menu for the manager
 models/                 Problem-domain classes, one file per use-case area
-  people.py             Person (abstract), Customer, Employee, Manager
+  people.py             Person (base class), Customer, Employee, Manager
   accounts.py           EmployeeAccount
   order_handler.py      OrderHandler (controller for the order sequence diagrams)
   orders.py             Order, OrderLine, MenuItem
   sales_database.py     SalesDatabase
-  payments.py           Payment (abstract), CardPayment, CashPayment, Receipt
+  payments.py           Payment (base class), CardPayment, CashPayment, Receipt
   promotions.py         Promotion
   inventory_ui.py       InventoryUI (the manager's inventory screen)
   inventory.py          Store, Inventory, InventoryItem
   inventory_database.py InventoryDatabase
-  reports.py            Report (abstract), SalesReport, InventoryReport, CustomerLoyaltyReport
+  reports.py            Report (base class), SalesReport, InventoryReport, CustomerLoyaltyReport
 database/
   schema.sql            CREATE TABLE statements for every class
   setup_db.py           Builds souffle.db and loads sample data
@@ -147,7 +149,7 @@ exports/                Created when a report is exported
 
 | Class (diagram) | Python file | Table |
 |---|---|---|
-| Person «abstract» | models/people.py | persons |
+| Person (base class) | models/people.py | persons |
 | Customer | models/people.py | customers |
 | Employee | models/people.py | employees |
 | Manager | models/people.py | managers |
@@ -157,7 +159,7 @@ exports/                Created when a report is exported
 | Order Line | models/orders.py | order_lines |
 | Menu Item | models/orders.py | menu_items |
 | Sales Database | models/sales_database.py | sales_records, cancellation_records |
-| Payment «abstract» | models/payments.py | payments |
+| Payment (base class) | models/payments.py | payments |
 | CardPayment | models/payments.py | card_payments |
 | CashPayment | models/payments.py | cash_payments |
 | Receipt | models/payments.py | receipts |
@@ -167,7 +169,7 @@ exports/                Created when a report is exported
 | Inventory | models/inventory.py | inventories |
 | InventoryItem | models/inventory.py | inventory_items |
 | Inventory Database | models/inventory_database.py | inventory_items |
-| Report «abstract» | models/reports.py | reports |
+| Report (base class) | models/reports.py | reports |
 | Sales Report | models/reports.py | sales_reports |
 | Inventory Report | models/reports.py | inventory_reports |
 | Customer Loyalty Report | models/reports.py | customer_loyalty_reports |
@@ -178,9 +180,9 @@ Design rules used (Chapter 9, data management layer):
 - **Associations**: one-to-many associations become foreign keys; many-to-many associations get a link table (`customer_promotions`, `sales_report_orders`, `inventory_report_items`, `loyalty_report_customers`).
 - **Controller and interface classes**: OrderHandler and InventoryUI only hold the order or screen being worked on while the app runs, so they have no table.
 - **Data-access classes**: Sales Database keeps its sales and cancellation records in `sales_records` and `cancellation_records`; Inventory Database reads and updates `inventory_items`.
-- **Association references**: where an object needs the object it is linked to, it keeps a reference named after the link: `InventoryUI.inventory` ("represents"), `Inventory.database` ("accesses"), `Report.managerID` ("generates") and `Report.storeID` ("covers").
 - **Derived attribute**: `/duration` of Promotion is calculated from its dates, not stored.
-- **Abstract classes** (Person, Payment, Report) cannot be created directly.
+- **Generalization (Milestone 5, guideline 8)**: the implementation class diagram removes the abstract classes and shows each child with the attributes and methods it inherits. In the code, those shared attributes and methods are written once in a base class (Person, Payment, Report), so each child class has exactly what the diagram shows. The base classes cannot be created on their own.
+- **Association attributes (Milestone 5, guideline 5)**: each association is kept as a reference to the related object or as its ID, which is also the foreign key in the database. For example `OrderLine.menuItem`, `Order.orderLine` (the list of lines), `Inventory.inventoryDatabase`, `Inventory.items`, `InventoryUI.inventory`, `Order.promotionID`, `Order.customerID`, `EmployeeAccount.managerID`, `Promotion.managerID`, and each report's `managerID` and `storeID`.
 - **Data-layer columns**, not attributes in the class diagram: `orders.storeID` (where the order was placed, so reports can filter by store), `orders.customerID` / `orders.employeeID` (in the diagram these links go through the OrderHandler; the order history and reports need them stored) and `orders.discountAmount` (the discount the promotion gave).
 
 Sample menu items and prices come from Soufflé's Clover item list; people and orders in the sample data are fictional.

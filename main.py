@@ -265,6 +265,18 @@ def manage_promotions_demo(manager):
           f"${discount:.2f} off, total ${order.orderTotal:.2f}")
     print(f"  trackEngagement -> {promotion.trackEngagement(promotion.promotionID)} order(s)")
 
+    print(f"\n  {order.orderID} goes through the whole flow: submit, prepare, ready, pay, complete")
+    handler.reviewOrder(order.orderID)
+    handler.submitOrder(order.orderID)
+    handler.startPreparation(order.orderID)
+    handler.markReady(order.orderID)
+    card = CardPayment(0, 0.0, "card", today, "", "credit", "")
+    print(f"  payOrder by credit card -> {load_customer(3).payOrder(order.orderID, card)}")
+    load_employee(1).markOrderComplete(order.orderID)
+
+    print("\nStore.generateDailySales(1): today's sales report for Eaton Centre")
+    Store(1, "Soufflé Eaton Centre", "").generateDailySales(1)
+
 
 def manage_inventory_demo(manager):
     """Manage Inventory (UC 04): the manager views the Eaton Centre inventory, filters the
@@ -273,23 +285,18 @@ def manage_inventory_demo(manager):
     print(f"Manager: {manager.getFullName()}")
     screen = InventoryUI(inventory=load_inventory(1))
 
-    print("\nView Inventory: viewInventoryList()")
-    screen.viewInventoryList()
+    print("\nView Inventory: viewInventory()")
+    screen.viewInventory()
 
     print("\nFilter: items below minimum only")
     screen.filterCategory = "below minimum"
-    screen.viewInventoryList()
+    screen.viewInventory()
     screen.filterCategory = ""
 
     print("\nUpdate Inventory Item: updateQuantity(1, 12)")
     screen.updateQuantity(1, 12)
     print("Update Inventory Item: updateQuantity(4, -3)")
     screen.updateQuantity(4, -3)
-
-    store = Store(1, "Soufflé Eaton Centre", "")
-    print("\nStore.generateDailySales() for Eaton Centre:")
-    for day, total in store.generateDailySales().items():
-        print(f"  {day}  ${total:>6.2f}")
 
 
 def create_reports_demo(manager):

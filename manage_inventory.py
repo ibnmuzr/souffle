@@ -4,8 +4,8 @@ The manager picks a store, views its inventory (with an optional search keyword 
 "below minimum" filter) and updates the quantity of an item. Each action runs its
 Milestone 4 sequence diagram through the InventoryUI:
 
-    View Inventory         viewInventoryList()
-    Update Inventory Item  updateQuantity(itemID, newQuant)
+    View Inventory         viewInventory()
+    Update Inventory Item  updateQuantity(itemID, newQuantity)
 
 Run from the project folder:  python3 manage_inventory.py
 """
@@ -53,7 +53,7 @@ def main():
 
     screen = InventoryUI(inventory=load_inventory(int(store)))
     print()
-    screen.viewInventoryList()
+    screen.viewInventory()
 
     while True:
         print("\n1 View inventory   2 Update a quantity   q Quit")
@@ -65,7 +65,7 @@ def main():
             low_only = ask("Only items below minimum? y/n", "n").lower() == "y"
             screen.filterCategory = LOW_STOCK_FILTER if low_only else ""
             print()
-            screen.viewInventoryList()
+            screen.viewInventory()
         elif choice == "2":
             try:
                 itemID = int(ask("Item ID"))
@@ -75,8 +75,8 @@ def main():
                 continue
             print(f"  {item.itemName}: current quantity {item.quantity}, "
                   f"minimum {item.minimumQuantity}")
-            newQuant = to_quantity(ask("New quantity"))
-            screen.updateQuantity(itemID, newQuant)
+            newQuantity = to_quantity(ask("New quantity"))
+            screen.updateQuantity(itemID, newQuantity)
         else:
             print("  Please choose 1, 2 or q.")
 

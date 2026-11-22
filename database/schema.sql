@@ -1,5 +1,5 @@
 -- Soufflé Management System: database schema (SQLite)
--- Built from the final Milestone 4 class diagram.
+-- Built from the class diagram (Milestone 4, kept in step with the Milestone 5 implementation class diagram).
 --   * One table per class whose objects must be kept. Columns use the exact attribute
 --     names from the class diagram.
 --   * OrderHandler («controller») and InventoryUI («interface») only hold what is on
