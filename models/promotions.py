@@ -1,7 +1,7 @@
 """Promotions (Manage Promotions use case): Promotion.
 
-A promotion moves through lifecycle states (for example draft, then shared) instead of
-being split into separate draft and shared classes.
+A promotion moves through lifecycle states (in process, draft, shared, expired) instead
+of being split into separate draft and shared classes.
 """
 from __future__ import annotations
 
@@ -11,14 +11,20 @@ from datetime import date
 from typing import Optional
 
 from database.connection import get_connection
-from .base import PLANNED
+
+
+SHARING_CHANNELS = ("email", "SMS", "social media", "website")
 
 
 @dataclass
 class Promotion:
     """A marketing promotion that can apply a discount to orders.
 
-    Associations: Manager "creates" Promotion; Promotion "applies to" Order;
+    States (Milestone 4 promotion state machine): created ("in process"), then saved as a
+    "draft" (and edited) or "shared" with the customers; it is only valid while shared
+    and within its dates.
+
+    Associations: Manager "creates" Promotion (managerID); Promotion "applies to" Order;
     Customer "receives" Promotion.
     """
     promotionID: int
@@ -29,7 +35,8 @@ class Promotion:
     startDate: date
     endDate: date
     sharingChannel: str  # email, SMS, social media or website; empty while a draft
-    lifecycleState: str  # "draft", "shared" or "expired"
+    lifecycleState: str  # "in process", "draft", "shared" or "expired"
+    managerID: Optional[int] = None   # the manager who created it
 
     @property
     def duration(self) -> int:
@@ -37,25 +44,65 @@ class Promotion:
         return (self.endDate - self.startDate).days
 
     def createPromotion(self, promotionID: int, title: str, discountType: str,
-                        discountValue: int, startDate: date, endDate: date):
-        raise NotImplementedError(PLANNED)
+                        discountValue: int, startDate: date, endDate: date) -> Promotion:
+        """Fill in a new promotion ("in process"). It is saved by saveDraft or sharePromotion."""
+        _check_details(title, discountType, discountValue, startDate, endDate)
+        self.promotionID, self.title = promotionID, title.strip()
+        self.discountType, self.discountValue = discountType, discountValue
+        self.startDate, self.endDate = startDate, endDate
+        self.creationDate, self.sharingChannel, self.lifecycleState = date.today(), "", "in process"
+        return self
 
     def sharePromotion(self, promotionID: int, sharingChannel: str) -> None:
-        raise NotImplementedError(PLANNED)
+        """Share the promotion with every customer through a channel. It becomes "shared"."""
+        from .people import all_customers
+        self._check_id(promotionID)
+        if sharingChannel not in SHARING_CHANNELS:
+            raise ValueError(f"The channel must be one of: {', '.join(SHARING_CHANNELS)}.")
+        self.sharingChannel, self.lifecycleState = sharingChannel, "shared"
+        self._save()
+        customers = all_customers()
+        with closing(get_connection()) as conn:
+            conn.executemany("INSERT OR IGNORE INTO customer_promotions VALUES (?, ?)",
+                             [(c.customerID, promotionID) for c in customers])
+            conn.commit()
+        for customer in customers:                      # Customer "receives" Promotion
+            customer.sharePromotion(self.title, self.discountType, self.discountValue,
+                                    self.startDate, self.endDate)
 
     def isValid(self, promotionID: int) -> bool:
         """True when the promotion has been shared and today is within its dates."""
         self._check_id(promotionID)
         return self.lifecycleState == "shared" and self.startDate <= date.today() <= self.endDate
 
-    def trackEngagement(self, promotionID: int):
-        raise NotImplementedError(PLANNED)
+    def trackEngagement(self, promotionID: int) -> int:
+        """How many orders used the promotion."""
+        self._check_id(promotionID)
+        with closing(get_connection()) as conn:
+            return conn.execute("SELECT COUNT(*) FROM orders WHERE promotionID = ?",
+                                (promotionID,)).fetchone()[0]
 
     def saveDraft(self, promotionID: int) -> None:
-        raise NotImplementedError(PLANNED)
+        """Save the promotion as a draft (not shared, so not valid yet)."""
+        self._check_id(promotionID)
+        if self.lifecycleState not in ("in process", "draft"):
+            raise ValueError("Only a new promotion or a draft can be saved as a draft.")
+        self.lifecycleState = "draft"
+        self._save()
 
-    def editDraft(self, promotionID: int) -> None:
-        raise NotImplementedError(PLANNED)
+    def editDraft(self, promotionID: int, title: Optional[str] = None,
+                  discountType: Optional[str] = None, discountValue: Optional[int] = None,
+                  startDate: Optional[date] = None, endDate: Optional[date] = None) -> None:
+        """Change a draft and save it (only drafts can be edited)."""
+        self._check_id(promotionID)
+        if self.lifecycleState != "draft":
+            raise ValueError("Only a draft can be edited.")
+        changed = (title or self.title, discountType or self.discountType,
+                   self.discountValue if discountValue is None else discountValue,
+                   startDate or self.startDate, endDate or self.endDate)
+        _check_details(*changed)
+        self.title, self.discountType, self.discountValue, self.startDate, self.endDate = changed
+        self._save()
 
     @classmethod
     def getPromotion(cls, promotionID: int) -> Optional[Promotion]:
@@ -75,6 +122,17 @@ class Promotion:
         self._check_id(promotionID)
         return self.discountValue
 
+    def _save(self) -> None:
+        if self.managerID is None:
+            raise ValueError("A promotion needs the manager who creates it.")
+        with closing(get_connection()) as conn:
+            conn.execute("INSERT OR REPLACE INTO promotions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                         (self.promotionID, self.managerID, self.title, self.discountType,
+                          self.discountValue, self.creationDate.isoformat(),
+                          self.startDate.isoformat(), self.endDate.isoformat(),
+                          self.sharingChannel or None, self.lifecycleState))
+            conn.commit()
+
     def _check_id(self, promotionID: int) -> None:
         if promotionID != self.promotionID:
             raise ValueError(f"This is promotion {self.promotionID}, not promotion {promotionID}.")
@@ -85,4 +143,25 @@ def promotion_from_row(r) -> Promotion:
     return Promotion(r["promotionID"], r["title"], r["discountType"], r["discountValue"],
                      date.fromisoformat(r["creationDate"]), date.fromisoformat(r["startDate"]),
                      date.fromisoformat(r["endDate"]), r["sharingChannel"] or "",
-                     r["lifecycleState"])
+                     r["lifecycleState"], managerID=r["managerID"])
+
+
+def next_promotion_id() -> int:
+    with closing(get_connection()) as conn:
+        return conn.execute("SELECT COALESCE(MAX(promotionID), 0) + 1 FROM promotions").fetchone()[0]
+
+
+def _check_details(title, discountType, discountValue, startDate, endDate) -> None:
+    """The rules every promotion must follow."""
+    problems = []
+    if not str(title).strip():
+        problems.append("a title")
+    if discountType not in ("percentage", "fixed"):
+        problems.append('a discount type of "percentage" or "fixed"')
+    if not isinstance(discountValue, int) or discountValue <= 0 or (
+            discountType == "percentage" and discountValue > 100):
+        problems.append("a discount value above 0 (and at most 100 for a percentage)")
+    if endDate < startDate:
+        problems.append("an end date on or after the start date")
+    if problems:
+        raise ValueError("The promotion needs " + ", ".join(problems) + ".")

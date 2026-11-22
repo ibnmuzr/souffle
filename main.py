@@ -3,21 +3,25 @@
 Builds the database, loads rows into the class-diagram classes to show that the
 classes, their attributes and the database line up, then runs the Create Reports
 use cases built so far the way their sequence diagrams describe them:
-Manage Orders (UC 01), Manage Inventory (UC 04) and Create Reports (UC 06).
+Manage Orders (UC 01), Process Payments (UC 02), Manage Employee Accounts (UC 03),
+Manage Inventory (UC 04), Manage Promotions (UC 05) and Create Reports (UC 06).
 
 Run from the project folder:  python3 main.py
 Interactive screens: python3 manage_orders.py, python3 manage_inventory.py and
 python3 create_reports.py
 """
-from datetime import date
+from datetime import date, timedelta
 
 from database.connection import get_connection
 from database.setup_db import create_database
 from models import (
     Customer, Manager, Person, Store, InventoryItem, InventoryUI, MenuItem, OrderHandler,
-    Promotion, CashPayment, SalesReport, InventoryReport, CustomerLoyaltyReport,
+    Promotion, CardPayment, CashPayment, SalesReport, InventoryReport, CustomerLoyaltyReport,
 )
+from models.accounts import load_account
+from models.orders import load_order
 from models.people import load_customer, load_employee
+from models.promotions import next_promotion_id
 from models.inventory import load_inventory
 from models.orders import order_from_row
 from models.reports import next_report_id
@@ -86,7 +90,7 @@ def main():
     cash = CashPayment(r["paymentID"], r["amount"], r["method"], d(r["paymentDate"]),
                        r["status"], r["cashReceived"], 0.0)
     print(f"\nCash payment of ${cash.amount:.2f} with ${cash.cashReceived:.2f} received: "
-          f"change due ${cash.calculateChange():.2f}")
+          f"change due ${cash.calculateChange(cash.amount, cash.cashReceived):.2f}")
 
     print("\nPromotions (lifecycleState, /duration):")
     for r in conn.execute("SELECT * FROM promotions"):
@@ -129,7 +133,10 @@ def main():
 
     conn.close()
     manage_orders_demo()
+    process_payments_demo()
+    manage_accounts_demo(manager)
     manage_inventory_demo(manager)
+    manage_promotions_demo(manager)
     create_reports_demo(manager)
     print("\nDone.")
 
@@ -192,6 +199,71 @@ def manage_orders_demo():
     print("\nComplete Order: ORD-0014 is paid, the customer picks it up")
     employee.markOrderComplete("ORD-0014")
     print(f"  {employee.displayStatus('ORD-0014')}")
+
+
+def process_payments_demo():
+    """Process Payments (UC 02): Emma pays for ORD-0013 (Ready). The card is declined,
+    then too little cash is declined, then the cash payment is approved."""
+    print("\n=== Process Payments (UC 02) ===")
+    customer = load_customer(4)
+    print(f"Customer: {customer.getFullName()}, order ORD-0013 "
+          f"(${load_order('ORD-0013').orderTotal:.2f})")
+    today = date.today()
+    card = CardPayment(0, 0.0, "card", today, "", "gift card", "")
+    print(f"  payOrder with a gift card -> {customer.payOrder('ORD-0013', card)} "
+          f"(declined: only debit and credit cards; order is {load_order('ORD-0013').orderStatus})")
+    cash = CashPayment(0, 0.0, "cash", today, "", 10.00, 0.0)
+    print(f"  payOrder with $10.00 cash -> {customer.payOrder('ORD-0013', cash)} "
+          f"(declined: not enough cash)")
+    cash = CashPayment(0, 0.0, "cash", today, "", 20.00, 0.0)
+    approved = customer.payOrder("ORD-0013", cash)
+    print(f"  payOrder with $20.00 cash -> {approved}, change ${cash.changeDue:.2f}, "
+          f"order is {load_order('ORD-0013').orderStatus}")
+    load_employee(1).markOrderComplete("ORD-0013")
+    print(f"  Employee.markOrderComplete -> {load_order('ORD-0013').orderStatus}")
+
+
+def manage_accounts_demo(manager):
+    """Manage Employee Accounts (UC 03): invalid information is refused, then Sam's
+    account is updated and Alex logs in."""
+    print("\n=== Manage Employee Accounts (UC 03) ===")
+    try:
+        manager.createAccount(1, "not-an-email", "cheque.docx", "123")
+    except ValueError as err:
+        print(f"  createAccount with bad information -> {err}")
+    print(f"  modifyAccount(1) with a bad email -> {manager.modifyAccount(1, employeeEmail='sam')}")
+    print(f"  modifyAccount(1) with a new password -> "
+          f"{manager.modifyAccount(1, accountPassword='SamBakes2026')}")
+    print(f"  verifyAccountPassword -> {load_account(1).verifyAccountPassword('SamBakes2026')}")
+    alex = load_employee(2)
+    print(f"  Employee.login('alex.m', 'manager123') -> {alex.login('alex.m', 'manager123')}")
+    alex.logout()
+
+
+def manage_promotions_demo(manager):
+    """Manage Promotions (UC 05): a draft is saved and edited, then a promotion is shared
+    and applied to an order (calculateDiscount)."""
+    print("\n=== Manage Promotions (UC 05) ===")
+    today = date.today()
+    draft = Promotion(0, "", "", 0, today, today, today, "", "", managerID=manager.managerID)
+    draft.createPromotion(next_promotion_id(), "Spring Tarts", "percentage", 20,
+                          date(2027, 3, 1), date(2027, 3, 31))
+    draft.saveDraft(draft.promotionID)
+    draft.editDraft(draft.promotionID, discountValue=25)
+    print(f"  Draft #{draft.promotionID} '{draft.title}': {draft.discountValue}% off, "
+          f"{draft.lifecycleState}, valid now: {draft.isValid(draft.promotionID)}")
+    print("  Manager.sharePromotion('Winter Warm-Up', $3 off) by SMS:")
+    manager.sharePromotion("Winter Warm-Up", "fixed", 3, today, today + timedelta(days=30), "SMS")
+    promotion = Promotion.getPromotion(draft.promotionID + 1)
+    print(f"  #{promotion.promotionID} is {promotion.lifecycleState}, valid now: "
+          f"{promotion.isValid(promotion.promotionID)}")
+    handler = OrderHandler(customer=load_customer(3), employee=load_employee(1))
+    order = handler.startOrder("in-store")
+    order.addItem(1, 2)
+    discount = handler.applyPromotion(promotion.promotionID)
+    print(f"  applyPromotion on {order.orderID} (${order.orderTotal + discount:.2f}): "
+          f"${discount:.2f} off, total ${order.orderTotal:.2f}")
+    print(f"  trackEngagement -> {promotion.trackEngagement(promotion.promotionID)} order(s)")
 
 
 def manage_inventory_demo(manager):

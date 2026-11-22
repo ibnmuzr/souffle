@@ -12,10 +12,12 @@ BTM 495 team project (Fall 2026). This is a prototype of the to-be system for So
 | 2 | **Manage Inventory (UC 04)** works end to end: view the inventory (search, below-minimum filter) and update a quantity, matching the Milestone 4 sequence diagrams | Done |
 | 2 | Sales report adds units sold per menu item and sales per day (`compileSalesFigures`, Milestone 5 method specification) | Done |
 | 2 | **Manage Orders (UC 01)** works end to end: create and submit, modify, cancel (manager approval once the kitchen has started), track and complete. Order states follow the Milestone 4 order state machine; `approveCancellation` and `calculateDiscount` follow the Milestone 5 method specifications | Done |
-| 2 | Methods of the other use cases: Payments, Promotions, Employee Accounts | In progress |
+| 2 | **Process Payments (UC 02)**: card and cash, declined payments (card not authorized, not enough cash), receipts, refunds, following the Milestone 5 method specification 01 | Done |
+| 2 | **Manage Employee Accounts (UC 03)** and **Manage Promotions (UC 05)**: create, validate (invalid information is refused), modify, delete accounts; create, save and edit drafts, share, validate and track promotions | Done |
+| 2 | Every operation of every class is implemented | Done |
 | 2 | Final sync with the Milestone 5 class diagram | Planned |
 
-Every operation from the class diagram is present with the same name and parameters. The ones not built yet raise *Implemented in an upcoming Prototype 2 commit*.
+Every operation from the class diagram is present with the same name and parameters, and all of them are implemented.
 
 ## How to run
 
@@ -24,6 +26,7 @@ You need Python 3.8 or newer. Nothing else to install: SQLite is built into Pyth
 ```bash
 python3 main.py               # full demo: rebuilds the database, runs Manage Orders, Manage Inventory and all three reports
 python3 manage_orders.py      # interactive screen: create, modify, cancel, track and complete orders
+python3 process_payments.py   # interactive screen: pay a Ready order by card or cash
 python3 manage_inventory.py   # interactive screen: view the inventory and update quantities
 python3 create_reports.py     # interactive menu: pick a report, store and period, then save or export
 python3 database/setup_db.py  # rebuild only the database with the sample data
@@ -51,6 +54,29 @@ Business rules used:
 - An order can only be completed once it is paid.
 
 Sample logins: employee Sam (`sam.t` / `changeme`), manager Alex (manager ID 1, password `manager123`).
+
+## Process Payments (UC 02)
+
+Follows the Milestone 4 "Pay by Card" and "Pay by Cash" sequence diagrams and the Milestone 5 method specification 01:
+
+`Customer.payOrder(orderID, paymentInfo)` → `Order.calculateTotal(orderID)` → `Order.confirmOrder(orderID, paymentInfo)` → `create(total)` → `processPayment(paymentID)`:
+- **Card**: `authorizeCard()`, then `validatePayment(paymentID)`. The terminal is simulated: debit and credit cards up to $300 are authorized, anything else is declined.
+- **Cash**: `validatePayment(paymentID)` (the cash received must cover the total), then `calculateChange(total, cashReceived)`.
+- **Approved**: `generateReceipt(orderID, paymentID)`, `printReceipt(orderID, paymentID)`, `recordSale(orderID)`, the order becomes Paid.
+- **Declined**: no receipt, the order becomes Declined and the customer can pay again.
+
+An order can be paid once it is Ready (order state machine). A cancelled paid order is refunded with `refundPayment(paymentID)`.
+
+## Manage Employee Accounts (UC 03)
+
+- `Manager.createAccount(employeeID, employeeEmail, voidCheque, accountPassword)` → `validateAccountInformation(accountID)` → `saveAccount(accountID, "active")`. Invalid information is refused with every problem listed (no such employee, employee already has an account, bad email, password under 8 characters, void cheque not a PDF/JPG/PNG).
+- `modifyAccount(accountID)` → `updateAccount(...)` (False and nothing saved if invalid); `deleteAccount(accountID)`.
+- `verifyAccountPassword(accountPassword)` is used by the manager's cancellation approval. `Employee.login` / `logout`.
+
+## Manage Promotions (UC 05)
+
+- `createPromotion(...)` fills in a new promotion; `saveDraft` keeps it as a draft, `editDraft` changes a draft, `sharePromotion(promotionID, sharingChannel)` shares it with every customer (`Customer.sharePromotion`).
+- `isValid(promotionID)`: shared and today is within its dates. `getPromotion`, `getDiscountType`, `getDiscountValue` are used by `Order.calculateDiscount`; `trackEngagement` counts the orders that used it.
 
 ## Manage Inventory (UC 04)
 
@@ -92,8 +118,9 @@ Business rules used:
 ## Project structure
 
 ```
-main.py                 Demo: builds the database, uses the classes, runs every use case built so far
+main.py                 Demo: builds the database, uses the classes, runs every use case
 manage_orders.py        Interactive Manage Orders screen for the employee
+process_payments.py     Interactive Process Payments screen at the counter
 manage_inventory.py     Interactive Manage Inventory screen for the manager
 create_reports.py       Interactive Create Reports menu for the manager
 models/                 Problem-domain classes, one file per use-case area
@@ -108,7 +135,6 @@ models/                 Problem-domain classes, one file per use-case area
   inventory.py          Store, Inventory, InventoryItem
   inventory_database.py InventoryDatabase
   reports.py            Report (abstract), SalesReport, InventoryReport, CustomerLoyaltyReport
-  base.py               Shared message for operations not built yet
 database/
   schema.sql            CREATE TABLE statements for every class
   setup_db.py           Builds souffle.db and loads sample data

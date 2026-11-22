@@ -18,7 +18,6 @@ from datetime import date, datetime, time, timedelta
 from typing import List, Optional
 
 from database.connection import get_connection
-from .base import PLANNED
 
 # ---- order states (Milestone 4 order state machine) ---------------------------------------
 ORDER_STATES = ["In process", "Entered", "Ordered", "Sent", "In progress", "Ready", "Paid",
@@ -261,7 +260,29 @@ class Order:
         return (start + timedelta(minutes=REMAKE_MINUTES)).time().replace(second=0,
                                                                           microsecond=0)
 
-    # ---- Process Payments (built in the next commit) ----------------------------------
+    # ---- Process Payments -------------------------------------------------------------
+
+    def confirmOrder(self, orderID: str, paymentInfo=None) -> bool:
+        """Sequence diagrams "Pay by Card" and "Pay by Cash": create(total), then
+        processPayment(paymentID). Approved: recordSale(orderID) and the order is "Paid".
+        Declined: the order is "Declined" and can be paid again."""
+        self._check_id(orderID)
+        status = self.getStatus(orderID)
+        if status not in ("Ready", "Declined"):
+            raise ValueError(f"Order {orderID} is {status}: it can be paid once it is Ready.")
+        if paymentInfo is None:
+            raise ValueError("Choose how to pay: a CardPayment or a CashPayment.")
+        if status == "Declined":
+            self.updateStatus(orderID, "Ready")              # pay again
+        paymentInfo.orderID = orderID
+        paymentInfo.create(self.calculateTotal(orderID))
+        approved = paymentInfo.processPayment(paymentInfo.paymentID)
+        if approved:
+            self.recordSale(orderID)
+            self.updateStatus(orderID, "Paid")
+        else:
+            self.updateStatus(orderID, "Declined")
+        return approved
 
     def recordSale(self, orderID: str) -> bool:
         """Record the order as a sale in the Sales Database."""
@@ -269,9 +290,6 @@ class Order:
         self._check_id(orderID)
         SalesDatabase(1).recordOrder(orderID)
         return True
-
-    def confirmOrder(self, orderID: str):
-        raise NotImplementedError(PLANNED)
 
     # ---- helpers (not in the class diagram) ---------------------------------------------
 

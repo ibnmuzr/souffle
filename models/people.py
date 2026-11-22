@@ -7,10 +7,9 @@ from __future__ import annotations
 from contextlib import closing
 from dataclasses import dataclass
 from datetime import date, time
-from typing import List
+from typing import List, Optional
 
 from database.connection import get_connection
-from .base import PLANNED
 from .orders import Order, load_order, order_from_row
 
 
@@ -30,8 +29,20 @@ class Person:
     def getFullName(self) -> str:
         return f"{self.firstName} {self.lastName}"
 
-    def updateContactInformation(self) -> None:
-        raise NotImplementedError(PLANNED)
+    def updateContactInformation(self, firstName: str, lastName: str, phone: str,
+                                 email: str) -> None:
+        """Change the person's name, phone and email (saved in the database)."""
+        if not firstName.strip() or not lastName.strip():
+            raise ValueError("The first and last name cannot be empty.")
+        if email and ("@" not in email or "." not in email.split("@")[-1]):
+            raise ValueError("The email is not valid.")
+        self.firstName, self.lastName = firstName.strip(), lastName.strip()
+        self.phone, self.email = phone.strip(), email.strip()
+        with closing(get_connection()) as conn:
+            conn.execute("UPDATE persons SET firstName = ?, lastName = ?, phone = ?, email = ? "
+                         "WHERE personID = ?",
+                         (self.firstName, self.lastName, self.phone, self.email, self.personID))
+            conn.commit()
 
 
 @dataclass
@@ -43,18 +54,33 @@ class Customer(Person):
     """
     customerID: int
 
-    def confirmOrder(self):
-        raise NotImplementedError(PLANNED)
+    def confirmOrder(self, orderID: str) -> bool:
+        """The customer confirms the order summary: it is submitted to the kitchen."""
+        from .order_handler import OrderHandler
+        return OrderHandler(customer=self).submitOrder(orderID)
 
-    def payOrder(self, orderID: str):
-        raise NotImplementedError(PLANNED)
+    def payOrder(self, orderID: str, paymentInfo) -> bool:
+        """Sequence diagrams "Pay by Card" / "Pay by Cash": total := calculateTotal(orderID),
+        then confirmOrder(orderID) with the card or cash payment. True if approved."""
+        order = load_order(orderID)
+        if order.customerID != self.customerID:
+            raise ValueError(f"Order {orderID} is not {self.getFullName()}'s order.")
+        order.calculateTotal(orderID)
+        return order.confirmOrder(orderID, paymentInfo)
 
-    def updateProfile(self):
-        raise NotImplementedError(PLANNED)
+    def updateProfile(self, customerID: int, updatedInfo: Customer) -> bool:
+        """Copy the new contact information into the customer's profile."""
+        if customerID != self.customerID:
+            raise ValueError(f"This is customer {self.customerID}, not customer {customerID}.")
+        self.updateContactInformation(updatedInfo.firstName, updatedInfo.lastName,
+                                      updatedInfo.phone, updatedInfo.email)
+        return True
 
     def sharePromotion(self, title: str, discountType: str, discountValue: int,
                        startDate: date, endDate: date) -> None:
-        raise NotImplementedError(PLANNED)
+        """The customer receives a shared promotion."""
+        off = f"{discountValue}% off" if discountType == "percentage" else f"${discountValue} off"
+        print(f"  [to {self.getFullName()}] {title}: {off}, {startDate} to {endDate}")
 
     def viewOrderHistory(self, customerID: int) -> List[Order]:
         """Return the customer's orders, newest first.
@@ -82,8 +108,12 @@ class Employee(Person):
     employeeStatus: str
     hireDate: date
 
-    def login(self, registerUserName: str, registerPassword: str):
-        raise NotImplementedError(PLANNED)
+    def login(self, registerUserName: str, registerPassword: str) -> bool:
+        """True when the user name and password match and the employee is active."""
+        self.loggedIn = (registerUserName == self.registerUserName
+                         and registerPassword == self.registerPassword
+                         and self.employeeStatus.lower() == "active")
+        return self.loggedIn
 
     def notifyCancellation(self, orderID: str) -> None:
         """Tell the kitchen staff to stop preparing a cancelled order."""
@@ -110,8 +140,8 @@ class Employee(Person):
         from .order_handler import OrderHandler
         OrderHandler(employee=self).markOrderComplete(orderID)
 
-    def logout(self):
-        raise NotImplementedError(PLANNED)
+    def logout(self) -> None:
+        self.loggedIn = False
 
 
 @dataclass
@@ -129,17 +159,43 @@ class Manager(Person):
 
     def createAccount(self, employeeID: int, employeeEmail: str, voidCheque: str,
                       accountPassword: str):
-        raise NotImplementedError(PLANNED)
+        """Sequence diagram "Create Employee Account": validateAccountInformation, then
+        saveAccount. Raises ValueError (nothing saved) if the information is invalid."""
+        from .accounts import EmployeeAccount, next_account_id
+        account = EmployeeAccount(next_account_id(), employeeID, employeeEmail.strip(),
+                                  accountPassword, "pending", voidCheque, managerID=self.managerID)
+        account.validateAccountInformation(account.accountID)
+        account.saveAccount(account.accountID, "active")
+        return account
 
-    def modifyAccount(self, accountID: int):
-        raise NotImplementedError(PLANNED)
+    def modifyAccount(self, accountID: int, employeeEmail: Optional[str] = None,
+                      accountPassword: Optional[str] = None,
+                      accountStatus: Optional[str] = None) -> bool:
+        """Change an account (only the values given). False if the new values are invalid."""
+        from .accounts import load_account
+        account = load_account(accountID)
+        return account.updateAccount(accountID, employeeEmail or account.employeeEmail,
+                                     accountPassword or account.accountPassword,
+                                     accountStatus or account.accountStatus)
 
-    def deleteAccount(self, accountID: int):
-        raise NotImplementedError(PLANNED)
+    def deleteAccount(self, accountID: int) -> bool:
+        """Delete an account. False if there is no such account."""
+        from .accounts import load_account
+        try:
+            load_account(accountID).deleteAccount(accountID)
+        except ValueError:
+            return False
+        return True
 
     def sharePromotion(self, title: str, discountType: str, discountValue: int,
-                       startDate: date, endDate: date):
-        raise NotImplementedError(PLANNED)
+                       startDate: date, endDate: date, sharingChannel: str = "email") -> None:
+        """Create a promotion and share it with the customers right away."""
+        from .promotions import Promotion, next_promotion_id
+        promotion = Promotion(0, "", "", 0, date.today(), startDate, endDate, "", "",
+                              managerID=self.managerID)
+        promotion.createPromotion(next_promotion_id(), title, discountType, discountValue,
+                                  startDate, endDate)
+        promotion.sharePromotion(promotion.promotionID, sharingChannel)
 
 
 def load_employee(employeeID: int) -> Employee:
@@ -174,3 +230,9 @@ def load_customer(customerID: int) -> Customer:
         raise ValueError(f"There is no customer {customerID}.")
     return Customer(r["personID"], r["firstName"], r["lastName"], r["phone"], r["email"],
                     r["customerID"])
+
+
+def all_customers() -> List[Customer]:
+    with closing(get_connection()) as conn:
+        ids = [r[0] for r in conn.execute("SELECT customerID FROM customers ORDER BY customerID")]
+    return [load_customer(customerID) for customerID in ids]
