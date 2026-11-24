@@ -1,0 +1,57 @@
+{% extends "portal/base.html" if layout == 'portal' else "site/base.html" %}
+{% from "macros.html" import money %}
+{% block title %}Payment Successful{% endblock %}
+{% block content %}
+<div style="max-width:860px">
+  <div class="crumb">{{ 'Payment confirmation · Output / Report' }}</div>
+  <h1>Payment Successful</h1>
+  <p class="lead">{{ 'Cash payment completed successfully.' if pay.method == 'cash' else 'Thank you for your purchase!' }}</p>
+
+  <div class="panel">
+    <b>{{ 'Payment validated. Receipt generated.' if pay.method == 'cash' else 'Payment successfully authorized.' }}</b>
+    <div class="small muted">The sale has been recorded. The receipt is available below.</div>
+  </div>
+
+  <div class="grid g-side">
+    <div class="box"><div class="box-body">
+      <h3>Payment details</h3>
+      <div class="kv" style="grid-template-columns:1fr">
+        <div><div class="small muted">Order ID</div><b>{{ view.order.orderID }}</b></div>
+        <div><div class="small muted">Confirmation Number</div><b>{{ pay.receiptNumber }}</b></div>
+        <div><div class="small muted">Payment Method</div><b>{{ 'Cash' if pay.method == 'cash' else (pay.cardType | capitalize) ~ ' card' }}</b></div>
+        <div><div class="small muted">Payment Status</div><b>{{ 'Paid' if pay.status | lower == 'approved' else pay.status }}</b></div>
+        <div><div class="small muted">Order Status</div><b>{{ view.order.orderStatus }}</b></div>
+      </div>
+    </div></div>
+
+    <div class="box"><div class="box-body">
+      <div class="actions split"><h3>Receipt</h3><span class="small muted">CAD</span></div>
+      <table class="totals">
+        {% for line in view.lines %}<tr><td>{{ line.menuItem.name }} × {{ line.quantity }}</td><td class="num">{{ money(line.lineTotal) }}</td></tr>{% endfor %}
+        <tr><td colspan="2" style="border-top:1px solid #d6d6d6"></td></tr>
+        <tr><td>Subtotal</td><td class="num">{{ money(view.subtotal) }}</td></tr>
+        {% if view.order.discountAmount %}<tr><td>Promotion discount</td><td class="num">−{{ money(view.order.discountAmount) }}</td></tr>{% endif %}
+        <tr class="grand"><td>Total Paid</td><td class="num big">{{ money(pay.amount) }}</td></tr>
+        {% if pay.method == 'cash' %}
+          <tr><td>Cash Received</td><td class="num">{{ money(pay.cashReceived) }}</td></tr>
+          <tr><td><b>Change Given</b></td><td class="num"><b>{{ money(pay.changeDue) }}</b></td></tr>
+        {% endif %}
+      </table>
+      <p class="hint">Receipt {{ pay.receiptNumber }} · {{ pay.receiptDate }} · All amounts in Canadian dollars (CAD).</p>
+    </div></div>
+  </div>
+
+  <div class="actions">
+    <a class="btn" href="{{ download }}">Download Receipt</a>
+    <button type="button" onclick="window.print()">Print Receipt</button>
+    <span class="spacer"></span>
+    {% if layout == 'portal' and view.order.orderStatus == 'Paid' %}
+      <form method="post" action="{{ url_for('order_status', orderID=view.order.orderID) }}" class="inline">
+        <input type="hidden" name="action" value="complete">
+        <button>Mark as Completed</button>
+      </form>
+    {% endif %}
+    <a class="btn primary" href="{{ done }}">{{ done_label }}</a>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,47 @@
+{% macro money(value) -%}${{ '%.2f' | format(value or 0) }}{%- endmacro %}
+
+{% macro status(s) -%}
+  {%- set bad = s in ('Declined', 'Cancelled', 'Awaiting Manager Approval') -%}
+  {%- set good = s in ('Paid', 'Accepted', 'approved', 'Completed') -%}
+  {%- set label = {'In process': 'In process', 'In progress': 'In Progress'}.get(s, s) -%}
+  <span class="status{{ ' bad' if bad }}{{ ' good' if good }}">{{ label }}</span>
+{%- endmacro %}
+
+{% macro messages() -%}
+  {% with msgs = get_flashed_messages(with_categories=true) %}
+    {% if msgs %}
+      <div class="msgs">
+        {% for cat, m in msgs %}
+          <div class="msg {{ cat }}"><span class="ic">{{ {'success': 'OK', 'error': '!', 'info': 'i'}.get(cat, 'i') }}</span><span>{{ m }}</span></div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+{%- endmacro %}
+
+{# Order summary table + totals, used by many wireframes #}
+{% macro items_table(view, unit=false) -%}
+  <table>
+    <tr><th>Item</th>{% if unit %}<th class="num">Unit price</th>{% endif %}<th class="num">Quantity</th><th class="num">Amount (CAD)</th></tr>
+    {% for line in view.lines %}
+      <tr>
+        <td>{{ line.menuItem.name }}{% if line.specialInstructions %}<div class="small muted">{{ line.specialInstructions }}</div>{% endif %}</td>
+        {% if unit %}<td class="num">{{ money(line.menuItem.price) }}</td>{% endif %}
+        <td class="num">{{ line.quantity }}</td>
+        <td class="num">{{ money(line.lineTotal) }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="4" class="empty">No items.</td></tr>
+    {% endfor %}
+  </table>
+{%- endmacro %}
+
+{% macro totals(view, label='Total (CAD)') -%}
+  <table class="totals">
+    <tr><td>Subtotal</td><td class="num">{{ money(view.subtotal) }}</td></tr>
+    {% if view.order.discountAmount %}
+      <tr><td>Promotion{% if view.promotion %}: {{ view.promotion.title }}{% endif %}</td><td class="num">−{{ money(view.order.discountAmount) }}</td></tr>
+    {% endif %}
+    <tr class="grand"><td>{{ label }}</td><td class="num big">{{ money(view.order.orderTotal) }}</td></tr>
+  </table>
+{%- endmacro %}

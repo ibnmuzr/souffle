@@ -1,0 +1,49 @@
+{% extends "portal/base.html" %}
+{% from "macros.html" import money, status %}
+{% block title %}Cancel Order {{ view.order.orderID }}{% endblock %}
+{% block content %}
+<div class="crumb">Orders / Order {{ view.order.orderID }} / Request cancellation</div>
+<h1>Cancel Order</h1>
+<p class="lead">Review the order and provide a reason before submitting a cancellation request.</p>
+
+<div class="grid g-side">
+  <div class="box">
+    <div class="box-head">Order Summary</div>
+    <div class="box-body">
+      <table class="totals">
+        <tr><td>Order ID</td><td class="num"><b>{{ view.order.orderID }}</b></td></tr>
+        <tr><td>Customer</td><td class="num">{{ view.customer_name }}</td></tr>
+        <tr><td>Status</td><td class="num">{{ status(view.order.orderStatus) }}</td></tr>
+        <tr><td>Items</td><td class="num">{{ view.item_count }}</td></tr>
+        <tr class="grand"><td>Order Total</td><td class="num">{{ money(view.order.orderTotal) }} CAD</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <form method="post" class="box">
+    <div class="box-head">Cancellation Request</div>
+    <div class="box-body">
+      <div class="field">
+        <label>Cancellation Reason *</label>
+        <div class="hint" style="margin:0 0 6px">Required: select one reason to continue.</div>
+        <select name="reason" required>
+          <option value="">Select a cancellation reason</option>
+          {% for r in reasons %}<option>{{ r }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="field"><label>Additional Details <span class="muted" style="font-weight:400">(Optional)</span></label>
+        <textarea name="details" placeholder="Add context about this cancellation request..."></textarea></div>
+      <div class="warning">
+        <b>WARNING</b>
+        Cancelling this order cannot be undone.
+        {% if needs_approval %}<br>The kitchen has started this order: a manager must approve the cancellation.{% endif %}
+        {% if view.order.orderStatus == 'Paid' %}<br>The order is paid: the payment will be refunded.{% endif %}
+      </div>
+      <div class="actions" style="justify-content:flex-end; border-top:1px solid #d6d6d6; padding-top:14px">
+        <a class="btn" href="{{ url_for('track_order', orderID=view.order.orderID) }}">Keep Order</a>
+        <button class="primary">Request Cancellation</button>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}

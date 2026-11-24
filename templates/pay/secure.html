@@ -1,0 +1,24 @@
+{% extends "portal/base.html" if layout == 'portal' else "site/base.html" %}
+{% from "macros.html" import money %}
+{% block title %}Secure Card Payment{% endblock %}
+{% block content %}
+<div style="max-width:720px">
+  <div class="crumb">Interaction 3 of 6 · Output</div>
+  <h1>Secure Card Payment</h1>
+  <p class="lead">You will enter your card details on the next step.</p>
+  <div class="idbar"><span>Order ID: {{ view.order.orderID }}</span><span>Amount due: {{ money(view.order.orderTotal) }} CAD</span></div>
+
+  <div class="box"><div class="box-body">
+    <h2>Secure Third-Party Payment Provider</h2>
+    <p class="small">Your payment will be securely processed through our payment provider.</p>
+    <p class="small muted" style="margin-bottom:6px">Accepted payment methods</p>
+    <div class="actions"><span class="status">Visa</span><span class="status">Mastercard</span><span class="status">Debit Card</span></div>
+    <div class="panel small" style="margin:14px 0 0">Your payment information is protected during processing. Card details are not stored.</div>
+  </div></div>
+
+  <div class="actions split">
+    <a class="btn" href="{{ back }}">Back to Payment Methods</a>
+    <a class="btn primary" href="{{ next }}">Continue to Secure Payment</a>
+  </div>
+</div>
+{% endblock %}

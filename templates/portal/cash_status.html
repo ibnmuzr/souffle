@@ -1,0 +1,30 @@
+{% extends "portal/base.html" %}
+{% from "macros.html" import money %}
+{% block title %}Cash Payment Status{% endblock %}
+{% block content %}
+<div style="max-width:860px">
+  <div class="crumb">Orders / Order {{ view.order.orderID }} / Payment status</div>
+  <h1>Cash Payment Status</h1>
+  <div class="idbar" style="margin-top:18px">
+    <span>Order ID: <b>{{ view.order.orderID }}</b></span>
+    <span>Order Total: <b>{{ money(total) }} CAD</b></span>
+    <span>Cash Received: <b>{{ money(received) }} CAD</b></span>
+  </div>
+
+  <div class="box"><div class="box-body">
+    <div class="actions" style="align-items:flex-start">
+      <div style="flex:1">
+        <h2>Cash Amount Validated</h2>
+        <p class="small">Give {{ money(change) }} in change to the customer.</p>
+        <p class="small muted">Confirm payment after giving the customer their change.</p>
+      </div>
+      <div class="change-box"><div>Change Due (CAD)</div><div class="big">{{ money(change) }}</div></div>
+    </div>
+    <form method="post" action="{{ url_for('cash_confirm', orderID=view.order.orderID) }}" class="actions split" style="margin-top:20px">
+      <input type="hidden" name="cashReceived" value="{{ '%.2f' | format(received) }}">
+      <a class="btn" href="{{ url_for('cash_payment', orderID=view.order.orderID) }}">Back to Payment</a>
+      <button class="primary">Confirm Payment</button>
+    </form>
+  </div></div>
+</div>
+{% endblock %}

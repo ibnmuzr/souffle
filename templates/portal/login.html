@@ -1,0 +1,28 @@
+{% from "macros.html" import messages %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in · Soufflé Employee Portal</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <span class="logo">SOUFFLÉ</span>
+    <nav class="topnav"><a href="{{ url_for('home') }}">Customer website</a></nav>
+  </header>
+  <main style="max-width:420px; margin:60px auto; padding:0 20px">
+    {{ messages() }}
+    <div class="crumb">Employee portal</div>
+    <h1>Sign in</h1>
+    <p class="lead">Use your register user name and password.</p>
+    <form method="post" class="box"><div class="box-body">
+      <div class="field"><label>User name</label><input name="username" autofocus></div>
+      <div class="field"><label>Password</label><input type="password" name="password"></div>
+      <button class="primary block">Sign in</button>
+    </div></form>
+    <p class="hint">Sample accounts: employee <b>sam.t</b> / <b>changeme</b> · manager <b>alex.m</b> / <b>manager123</b></p>
+  </main>
+</body>
+</html>

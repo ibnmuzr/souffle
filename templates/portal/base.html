@@ -1,0 +1,51 @@
+{% from "macros.html" import messages %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Employee Portal{% endblock %} · Soufflé</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  {% set page = request.endpoint or '' %}
+  {% set section = 'dashboard' if page == 'dashboard'
+        else 'menu' if page == 'portal_menu'
+        else 'inventory' if page.startswith('inventory')
+        else 'kitchen' if page == 'kitchen'
+        else 'accounts' if page.startswith('account')
+        else 'promotions' if page.startswith('promotion')
+        else 'reports' if page == 'reports'
+        else 'orders' %}
+  <header class="topbar">
+    <a class="logo" href="{{ url_for('dashboard') }}">SOUFFLÉ</a>
+    <nav class="topnav">
+      <a href="{{ url_for('dashboard') }}" class="{{ 'on' if section == 'dashboard' }}">Dashboard</a>
+      <a href="{{ url_for('orders') }}" class="{{ 'on' if section in ('orders', 'kitchen') }}">Orders</a>
+      <a href="{{ url_for('portal_menu') }}" class="{{ 'on' if section == 'menu' }}">Menu</a>
+      <a href="{{ url_for('inventory') }}" class="{{ 'on' if section == 'inventory' }}">Inventory</a>
+      <span class="sep"></span>
+      <a class="boxed" href="{{ url_for('portal_logout') }}">Logout</a>
+    </nav>
+  </header>
+  <div class="portal">
+    <aside class="sidebar">
+      <div class="label">Employee<br>Portal</div>
+      <a href="{{ url_for('dashboard') }}" class="{{ 'on' if section == 'dashboard' }}">Dashboard</a>
+      <a href="{{ url_for('orders') }}" class="{{ 'on' if section == 'orders' }}">Orders</a>
+      <a href="{{ url_for('kitchen') }}" class="{{ 'on' if section == 'kitchen' }}">Kitchen</a>
+      <a href="{{ url_for('portal_menu') }}" class="{{ 'on' if section == 'menu' }}">Menu</a>
+      <a href="{{ url_for('inventory') }}" class="{{ 'on' if section == 'inventory' }}">Inventory</a>
+      <div class="label second">Manager</div>
+      <a href="{{ url_for('accounts') }}" class="{{ 'on' if section == 'accounts' }}">Accounts</a>
+      <a href="{{ url_for('promotions') }}" class="{{ 'on' if section == 'promotions' }}">Promotions</a>
+      <a href="{{ url_for('reports') }}" class="{{ 'on' if section == 'reports' }}">Reports</a>
+      <div class="who">{{ staff.name }}<br>{{ staff.role }} · Employee ID {{ staff.employeeID }}<br>Soufflé Eaton Centre</div>
+    </aside>
+    <main class="content">
+      {{ messages() }}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</body>
+</html>

@@ -1,0 +1,30 @@
+{% extends "portal/base.html" if layout == 'portal' else "site/base.html" %}
+{% from "macros.html" import money %}
+{% block title %}Select Payment Method{% endblock %}
+{% block content %}
+{% set method = method or ('cash' if layout == 'portal' else 'card') %}
+<div style="max-width:720px">
+  <div class="crumb">{% if layout == 'portal' %}Orders / Order {{ view.order.orderID }} / Payment{% else %}Interaction 2 of 6 · Input{% endif %}</div>
+  <h1>Select Payment Method</h1>
+  <p class="lead">{% if layout == 'portal' %}How is the customer paying?{% else %}Choose how you will pay for your order.{% endif %}</p>
+
+  <div class="idbar"><span>Order ID: {{ view.order.orderID }}</span><span>Order total: {{ money(view.order.orderTotal) }} CAD</span></div>
+
+  <form method="post" action="{{ action }}">
+    <h3>Choose Your Payment Method</h3>
+    <p class="small muted">Select one payment method to continue.</p>
+    <label class="choice">
+      <span class="t"><input type="radio" name="method" value="cash" {{ 'checked' if method == 'cash' }}> Pay by Cash</span>
+      <span class="d">{% if layout == 'portal' %}The customer pays in cash at the counter.{% else %}Pay in cash when you pick up your order at Soufflé.{% endif %}</span>
+    </label>
+    <label class="choice">
+      <span class="t"><input type="radio" name="method" value="card" {{ 'checked' if method == 'card' }}> Pay by Credit/Debit Card</span>
+      <span class="d">{% if layout == 'portal' %}The customer pays with a credit or debit card.{% elif view.order.orderStatus in ('Ready', 'Declined') %}Pay securely online using your credit or debit card.{% else %}Pay securely online by card as soon as the kitchen marks your order Ready.{% endif %}</span>
+    </label>
+    <div class="actions split" style="margin-top:20px">
+      <a class="btn" href="{{ back }}">{{ back_label or 'Back to Order Summary' }}</a>
+      <button class="primary">{{ 'Continue to Payment' if view.order.orderStatus in ('Ready', 'Declined') else 'Confirm and Place Order' }}</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends "portal/base.html" %}
+{% block title %}Update Inventory Quantity{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="crumb">Inventory / INV{{ '%03d' | format(item.itemID) }} / Update quantity</div>
+    <h1>Update Inventory Quantity</h1>
+    <p class="lead" style="margin:0">Review the selected inventory item and enter a new stock quantity.</p>
+  </div>
+  <span class="role">{{ staff.role }}</span>
+</div>
+
+<div class="box" style="max-width:820px"><div class="box-body">
+  <div class="kv">
+    <span class="k">Item ID:</span><span class="v">INV{{ '%03d' | format(item.itemID) }}</span>
+    <span class="k">Item Name:</span><span class="v">{{ item.itemName }}</span>
+    <span class="k">Current Quantity:</span><span class="v">{{ item.quantity }}</span>
+    <span class="k">Minimum Quantity:</span><span class="v">{{ item.minimumQuantity }}</span>
+    <span class="k">Store:</span><span class="v">{{ store }}</span>
+  </div>
+</div></div>
+
+<form method="post" style="max-width:420px">
+  <div class="field">
+    <label>New Quantity</label>
+    <input name="newQuantity" value="{{ value }}" inputmode="numeric" autofocus>
+    <div class="hint">Enter a non-negative quantity.</div>
+  </div>
+  {% if problem %}<div class="alt bad" style="margin:0 0 14px">{{ problem }}</div>{% endif %}
+  <div class="actions">
+    <a class="btn" href="{{ url_for('inventory', store=storeID) }}">Cancel</a>
+    <button class="primary">Save Changes</button>
+  </div>
+</form>
+{% endblock %}

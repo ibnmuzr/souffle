@@ -1,0 +1,44 @@
+{% extends "site/base.html" %}
+{% from "macros.html" import money, totals %}
+{% block title %}Order Confirmed{% endblock %}
+{% block content %}
+<div class="crumb">Interaction 3 · Output · Pay by {{ method }}</div>
+<h1>Order Confirmed!</h1>
+<p class="lead">Your order has been placed successfully.</p>
+
+<div class="idbar"><span>Order ID: <b>{{ view.order.orderID }}</b></span><span>Total Due: <b>{{ money(view.order.orderTotal) }} CAD</b></span></div>
+
+<div class="grid g-2">
+  <div>
+    <h3>Order Details</h3>
+    <div class="kv">
+      <span class="k">Order status</span><span class="v">{{ view.order.orderStatus }}</span>
+      <span class="k">Payment method</span><span class="v">{{ 'Cash' if method == 'cash' else 'Credit/Debit Card' }}</span>
+      <span class="k">Payment status</span><span class="v">{{ payment_status }}</span>
+      <span class="k">Pickup time</span><span class="v">{{ view.pickup or '—' }}</span>
+    </div>
+  </div>
+  <div>
+    <h3>Order Summary</h3>
+    <table class="totals">
+      {% for line in view.lines %}<tr><td>{{ line.menuItem.name }} × {{ line.quantity }}</td><td class="num">{{ money(line.lineTotal) }}</td></tr>{% endfor %}
+    </table>
+    {{ totals(view, 'Total Due') }}
+  </div>
+</div>
+
+<div class="panel" style="margin-top:22px">
+  {% if method == 'cash' %}
+    <b>Please pay {{ money(view.order.orderTotal) }} in cash when picking up your order at Soufflé.</b>
+    <div class="small muted">Payment is still pending. An employee will process your cash payment in-store.</div>
+  {% else %}
+    <b>You will pay {{ money(view.order.orderTotal) }} by card once your order is Ready.</b>
+    <div class="small muted">We'll start preparing it now. When the status in My Orders shows Ready, select “Pay by Card”.</div>
+  {% endif %}
+</div>
+
+<div class="actions split">
+  <a class="btn" href="{{ url_for('home') }}">Return to Home</a>
+  <a class="btn primary" href="{{ url_for('my_orders') }}">View My Orders</a>
+</div>
+{% endblock %}

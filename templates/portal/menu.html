@@ -1,0 +1,18 @@
+{% extends "portal/base.html" %}
+{% from "macros.html" import money %}
+{% block title %}Menu{% endblock %}
+{% block content %}
+<div class="crumb">Menu</div>
+<h1>Menu</h1>
+<p class="lead">Menu items and prices (from Soufflé's Clover item list).</p>
+<div class="box">
+  <table>
+    <tr><th>ID</th><th>Item</th><th>Category</th><th class="num">Price (CAD)</th><th>Availability</th></tr>
+    {% for m in menu %}
+    <tr><td>{{ m.menuItemID }}</td><td><b>{{ m.name }}</b>{% if m.description %}<div class="small muted">{{ m.description }}</div>{% endif %}</td>
+        <td>{{ m.category }}</td><td class="num">{{ money(m.price) }}</td>
+        <td><span class="status">{{ 'Available' if m.isAvailable else 'Not available' }}</span></td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% from "macros.html" import messages %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Soufflé{% endblock %} · Soufflé</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  {% set page = request.endpoint or '' %}
+  <header class="topbar">
+    <a class="logo" href="{{ url_for('home') }}">SOUFFLÉ</a>
+    <nav class="topnav">
+      <a href="{{ url_for('home') }}" class="{{ 'on' if page == 'home' }}">Home</a>
+      <a href="{{ url_for('site_menu') }}" class="{{ 'on' if page == 'site_menu' }}">Menu</a>
+      <a href="{{ url_for('my_orders') }}" class="{{ 'on' if page in ('my_orders', 'order_confirmed', 'site_pay', 'site_secure', 'site_card', 'site_receipt') }}">My Orders</a>
+      <a href="{{ url_for('cart') }}" class="{{ 'on' if page in ('cart', 'checkout') }}"><b>Cart</b>{% if cart_count %}<span class="cart-count">{{ cart_count }}</span>{% endif %}</a>
+    </nav>
+  </header>
+  <main class="site-main">
+    {{ messages() }}
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="site-footer">
+    <span><b>SOUFFLÉ</b> &nbsp; Signed in as {{ website_customer }} · <a href="{{ url_for('portal_login') }}">Employee portal</a></span>
+    <span>All prices are in Canadian dollars (CAD).</span>
+  </footer>
+</body>
+</html>

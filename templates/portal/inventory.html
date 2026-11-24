@@ -1,0 +1,39 @@
+{% extends "portal/base.html" %}
+{% block title %}Manage Inventory{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="crumb">Inventory / Inventory list</div>
+    <h1>Manage Inventory</h1>
+    <p class="lead" style="margin:0">View and update existing inventory quantities.</p>
+  </div>
+  <span class="role">{{ staff.role }}</span>
+</div>
+
+<form method="get" class="row" style="margin-bottom:18px">
+  <div class="field" style="max-width:360px"><label>Search by item ID or name</label><input name="q" value="{{ search }}" placeholder="e.g. 4 or eggs"></div>
+  <div class="field" style="max-width:240px"><label>Store</label>
+    <select name="store" onchange="this.form.submit()">
+      {% for s in stores %}<option value="{{ s.storeID }}" {{ 'selected' if s.storeID == storeID }}>{{ s.storeName }}</option>{% endfor %}
+    </select></div>
+  <label class="check" style="padding-bottom:9px"><input type="checkbox" name="low" value="1" {{ 'checked' if screen.filterCategory }}> Only below minimum</label>
+  <button>Search</button>
+</form>
+
+<table class="bordered">
+  <tr><th>Item ID</th><th>Item name</th><th>Current quantity</th><th>Minimum</th><th>Stock</th><th>Action</th></tr>
+  {% for item in items %}
+  <tr>
+    <td>INV{{ '%03d' | format(item.itemID) }}</td>
+    <td>{{ item.itemName }}</td>
+    <td>{{ item.quantity }}</td>
+    <td>{{ item.minimumQuantity }}</td>
+    <td>{% if item.quantity < item.minimumQuantity %}<span class="status bad">Low</span>{% else %}<span class="status">OK</span>{% endif %}</td>
+    <td><a class="btn sm" href="{{ url_for('inventory_update', storeID=storeID, itemID=item.itemID) }}">Edit</a></td>
+  </tr>
+  {% else %}
+  <tr><td colspan="6" class="empty">No items match the search{{ ' or filter' if screen.filterCategory }}.</td></tr>
+  {% endfor %}
+</table>
+<p class="hint">Last updated: {{ screen.lastUpdated }} · {{ items | length }} items shown</p>
+{% endblock %}

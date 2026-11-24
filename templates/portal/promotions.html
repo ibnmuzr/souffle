@@ -1,0 +1,71 @@
+{% extends "portal/base.html" %}
+{% from "macros.html" import status %}
+{% block title %}Promotions{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="crumb">Manager / Promotions</div>
+    <h1>Manage Promotions</h1>
+    <p class="lead" style="margin:0">Create, save and edit drafts, share with customers, and track engagement.</p>
+  </div>
+  <span class="role">{{ staff.role }}</span>
+</div>
+
+<div class="box">
+  <table>
+    <tr><th>ID</th><th>Title</th><th>Discount</th><th>Runs</th><th>State</th><th>Valid today</th><th class="num">Used by</th><th>Actions</th></tr>
+    {% for row in promotions %}{% set p = row.p %}
+    <tr>
+      <td>{{ p.promotionID }}</td>
+      <td><b>{{ p.title }}</b>{% if p.sharingChannel %}<div class="small muted">via {{ p.sharingChannel }}</div>{% endif %}</td>
+      <td>{{ p.discountValue ~ '%' if p.discountType == 'percentage' else '$' ~ p.discountValue }} off</td>
+      <td class="small">{{ p.startDate }} → {{ p.endDate }}<div class="muted">{{ p.duration }} days</div></td>
+      <td>{{ status(p.lifeCycleState | capitalize) }}</td>
+      <td>{{ 'Yes' if row.valid else 'No' }}</td>
+      <td class="num">{{ row.used }} order{{ '' if row.used == 1 else 's' }}</td>
+      <td>
+        {% if p.lifeCycleState == 'draft' %}
+        <details>
+          <summary>Edit or share</summary>
+          <form method="post" action="{{ url_for('promotion_edit', promotionID=p.promotionID) }}">
+            <div class="field"><label>Title</label><input name="title" value="{{ p.title }}"></div>
+            <div class="row" style="margin-bottom:10px">
+              <div class="field"><label>Type</label><select name="discountType">{% for t in ('percentage', 'fixed') %}<option {{ 'selected' if t == p.discountType }}>{{ t }}</option>{% endfor %}</select></div>
+              <div class="field"><label>Value</label><input type="number" min="0" name="discountValue" value="{{ p.discountValue }}"></div>
+            </div>
+            <div class="row" style="margin-bottom:10px">
+              <div class="field"><label>Start</label><input type="date" name="startDate" value="{{ p.startDate }}"></div>
+              <div class="field"><label>End</label><input type="date" name="endDate" value="{{ p.endDate }}"></div>
+            </div>
+            <button class="sm">Save Draft</button>
+          </form>
+          <form method="post" action="{{ url_for('promotion_share', promotionID=p.promotionID) }}" class="row" style="margin-top:10px">
+            <div class="field"><select name="sharingChannel">{% for c in channels %}<option>{{ c }}</option>{% endfor %}</select></div>
+            <button class="sm primary">Share</button>
+          </form>
+        </details>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+
+<div class="box">
+  <div class="box-head">New promotion</div>
+  <form method="post" action="{{ url_for('promotion_new') }}" class="box-body">
+    <div class="row" style="margin-bottom:14px">
+      <div class="field" style="flex:2"><label>Title</label><input name="title" placeholder="e.g. Winter Cheesecake Week"></div>
+      <div class="field"><label>Discount type</label><select name="discountType"><option>percentage</option><option>fixed</option></select></div>
+      <div class="field"><label>Value (% or $)</label><input type="number" min="0" name="discountValue" value="10"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Start date</label><input type="date" name="startDate" value="{{ today }}"></div>
+      <div class="field"><label>End date</label><input type="date" name="endDate" value="{{ today }}"></div>
+      <div class="field"><label>Channel (if sharing now)</label><select name="sharingChannel">{% for c in channels %}<option>{{ c }}</option>{% endfor %}</select></div>
+      <button name="action" value="draft">Save as Draft</button>
+      <button name="action" value="share" class="primary">Share Now</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

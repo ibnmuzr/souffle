@@ -1,0 +1,38 @@
+{% extends "portal/base.html" %}
+{% block title %}Inventory Updated{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="crumb">Inventory / INV{{ '%03d' | format(item.itemID) }} / Confirmation</div>
+    <h1>Inventory Updated</h1>
+    <p class="lead" style="margin:0">The inventory quantity has been successfully updated.</p>
+  </div>
+  <span class="role">{{ staff.role }}</span>
+</div>
+
+<div class="panel" style="border-color:#222">
+  <b>✓ Your changes have been saved successfully.</b>
+  <div class="small muted">The updated inventory record is now available.</div>
+</div>
+
+<div class="box">
+  <div class="box-head"><span class="crumb" style="margin:0; color:#111">Updated inventory details</span><span class="status">Updated</span></div>
+  <div class="box-body">
+    <div class="kv">
+      <span class="k">Item ID:</span><span class="v">INV{{ '%03d' | format(item.itemID) }}</span>
+      <span class="k">Item Name:</span><span class="v">{{ item.itemName }}</span>
+      <span class="k">Previous Quantity:</span><span class="v">{{ old }}</span>
+      <span class="k">Updated Quantity:</span><span class="v">{{ item.quantity }}</span>
+      <span class="k">Minimum Quantity:</span><span class="v">{{ item.minimumQuantity }}{{ ' · still below minimum' if item.quantity < item.minimumQuantity else '' }}</span>
+      <span class="k">Store:</span><span class="v">{{ store }}</span>
+      <span class="k">Last Updated:</span><span class="v">{{ lastUpdated }}</span>
+      <span class="k">Update Status:</span><span class="v">Saved Successfully</span>
+    </div>
+  </div>
+</div>
+
+<div class="actions" style="justify-content:flex-end">
+  <a class="btn" href="{{ url_for('inventory_update', storeID=storeID, itemID=item.itemID) }}">Edit Again</a>
+  <a class="btn primary" href="{{ url_for('inventory', store=storeID) }}">Return to Inventory</a>
+</div>
+{% endblock %}

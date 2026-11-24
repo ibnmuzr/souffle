@@ -1,0 +1,66 @@
+{% extends "portal/base.html" %}
+{% from "macros.html" import status %}
+{% block title %}Employee Accounts{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="crumb">Manager / Employee accounts</div>
+    <h1>Manage Employee Accounts</h1>
+    <p class="lead" style="margin:0">Create, validate, modify and delete employee accounts.</p>
+  </div>
+  <span class="role">{{ staff.role }}</span>
+</div>
+
+<div class="box">
+  <table>
+    <tr><th>Account</th><th>Employee</th><th>Email</th><th>Void cheque</th><th>Status</th><th>Actions</th></tr>
+    {% for a in accounts %}
+    <tr>
+      <td>{{ a.accountID }}</td>
+      <td>EMP{{ '%03d' | format(a.employeeID) }} · {{ a.firstName }} {{ a.lastName }}</td>
+      <td>{{ a.employeeEmail }}</td>
+      <td class="small muted">{{ a.voidCheque or '—' }}</td>
+      <td>{{ status(a.accountStatus | capitalize) }}</td>
+      <td>
+        <details>
+          <summary>Edit</summary>
+          <form method="post" action="{{ url_for('account_edit', accountID=a.accountID) }}">
+            <div class="field"><label>Email</label><input name="employeeEmail" value="{{ a.employeeEmail }}"></div>
+            <div class="field"><label>New password (blank keeps it)</label><input type="password" name="accountPassword"></div>
+            <div class="field"><label>Status</label><select name="accountStatus">{% for s in ('active', 'inactive') %}<option {{ 'selected' if s == a.accountStatus }}>{{ s }}</option>{% endfor %}</select></div>
+            <button class="sm primary">Save Changes</button>
+          </form>
+          <form method="post" action="{{ url_for('account_delete', accountID=a.accountID) }}" onsubmit="return confirm('Delete account {{ a.accountID }}?');" style="margin-top:8px">
+            <button class="sm">Delete Account</button>
+          </form>
+        </details>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6" class="empty">No accounts.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+
+<div class="box">
+  <div class="box-head">Create an account</div>
+  <div class="box-body">
+    {% if not without %}
+      <p class="small muted" style="margin:0">Every employee already has an account. Delete one above to try creating it again.</p>
+    {% else %}
+    <form method="post" action="{{ url_for('account_new') }}">
+      <div class="row" style="margin-bottom:14px">
+        <div class="field"><label>Employee</label><select name="employeeID">{% for s in without %}<option value="{{ s.employeeID }}">EMP{{ '%03d' | format(s.employeeID) }} · {{ s.firstName }} {{ s.lastName }}</option>{% endfor %}</select></div>
+        <div class="field"><label>Email</label><input name="employeeEmail" placeholder="name@souffle.ca"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Password (8+ characters)</label><input type="password" name="accountPassword"></div>
+        <div class="field"><label>Void cheque file</label><input name="voidCheque" value="uploads/void_cheque.pdf"></div>
+        <button class="primary">Create Account</button>
+      </div>
+      <p class="hint">Invalid information is refused with every problem listed.</p>
+    </form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends "portal/base.html" %}
+{% from "macros.html" import money %}
+{% block title %}Process Cash Payment{% endblock %}
+{% block content %}
+<div style="max-width:820px">
+  <div class="crumb">Orders / Order {{ view.order.orderID }} / Payment validation</div>
+  <h1>Process Cash Payment</h1>
+  <div class="idbar" style="margin-top:18px"><span>Order ID: <b>{{ view.order.orderID }}</b></span><span>Amount due: <b>{{ money(total) }} CAD</b></span></div>
+
+  <form method="post">
+    <h3>Employee Cash Entry</h3>
+    <p class="small muted">Enter the amount received from the customer.</p>
+    <div class="row" style="max-width:460px; margin-bottom:6px">
+      <div class="field"><label>Cash Received ($)</label><input name="cashReceived" value="{{ received }}" placeholder="0.00" inputmode="decimal" autofocus></div>
+      <span class="small muted" style="padding-bottom:10px">CAD</span>
+    </div>
+    {% if problem %}<div class="alt bad" style="max-width:460px">{{ problem }}</div>{% endif %}
+    <div class="actions split" style="margin-top:22px">
+      <a class="btn" href="{{ url_for('portal_pay', orderID=view.order.orderID) }}">Back to Payment Methods</a>
+      <button class="primary">Validate Payment</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

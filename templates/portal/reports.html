@@ -1,0 +1,50 @@
+{% extends "portal/base.html" %}
+{% block title %}Reports{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="crumb">Manager / Reports</div>
+    <h1>Create Reports</h1>
+    <p class="lead" style="margin:0">Sales, inventory and customer loyalty reports for a store and period.</p>
+  </div>
+  <span class="role">{{ staff.role }}</span>
+</div>
+
+<form method="post" class="box"><div class="box-body">
+  <div class="row" style="margin-bottom:14px">
+    <div class="field"><label>Report</label>
+      <select name="type">{% for v, l in [('sales', 'Sales'), ('inventory', 'Inventory'), ('loyalty', 'Customer loyalty')] %}<option value="{{ v }}" {{ 'selected' if form.get('type') == v }}>{{ l }}</option>{% endfor %}</select></div>
+    <div class="field"><label>Store</label>
+      <select name="storeID">{% for s in stores %}<option value="{{ s.storeID }}" {{ 'selected' if form.get('storeID') == s.storeID|string }}>{{ s.storeName }}</option>{% endfor %}</select></div>
+    <div class="field"><label>Start date</label><input type="date" name="startDate" value="{{ form.get('startDate', default_start) }}"></div>
+    <div class="field"><label>End date</label><input type="date" name="endDate" value="{{ form.get('endDate', today) }}"></div>
+  </div>
+  <div class="row">
+    <label class="check"><input type="checkbox" name="save" value="1" {{ 'checked' if form.get('save') }}> Save the report</label>
+    <label class="check"><input type="checkbox" name="export" value="1" {{ 'checked' if form.get('export') }}> Export as</label>
+    <select name="format" style="width:auto">{% for f in formats %}<option {{ 'selected' if form.get('format') == f }}>{{ f }}</option>{% endfor %}</select>
+    <span class="spacer" style="flex:1"></span>
+    <button class="primary">Generate Report</button>
+  </div>
+</div></form>
+
+{% if result %}
+<h2>{{ result.title }} · {{ result.store }}</h2>
+<div class="grid g-4" style="margin-bottom:18px">
+  {% for label, value in result.summary %}
+  <div class="stat"><div class="num">{% if value is float %}{{ ('$' if 'revenue' in label|lower or 'total' in label|lower else '') ~ '%.2f'|format(value) }}{% else %}{{ value }}{% endif %}</div><div class="lbl">{{ label }}</div></div>
+  {% endfor %}
+</div>
+{% if result.rows %}
+<div class="box"><table>
+  <tr>{% for h in result.header %}<th>{{ h }}</th>{% endfor %}</tr>
+  {% for r in result.rows %}<tr>{% for c in r %}<td>{{ '%.2f'|format(c) if c is float else c }}</td>{% endfor %}</tr>{% endfor %}
+</table></div>
+{% endif %}
+<div class="actions">
+  {% if result.file %}<a class="btn primary" href="{{ url_for('download_export', filename=result.file) }}">Download {{ result.file }}</a>{% endif %}
+  <button type="button" onclick="window.print()">Print Report</button>
+</div>
+<details style="margin-top:16px"><summary>Full report as printed</summary><pre class="receipt">{{ result.text }}</pre></details>
+{% endif %}
+{% endblock %}
