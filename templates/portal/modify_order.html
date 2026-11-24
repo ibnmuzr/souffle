@@ -1,0 +1,90 @@
+{% extends "portal/base.html" %}
+{% from "macros.html" import money %}
+{% block title %}Modify Order {{ view.order.orderID }}{% endblock %}
+{% block content %}
+<div class="crumb">Orders / Order {{ view.order.orderID }} / Modify items</div>
+<h1>Modify Order {{ view.order.orderID }}</h1>
+<p class="lead">Adjust quantities, remove items, or add another item to this order.</p>
+
+<form method="post" id="modify">
+<div class="grid g-main">
+  <div>
+    <div class="box">
+      <div class="box-head">Order Items <span class="muted">Prices in CAD</span></div>
+      <table id="lines">
+        <tr><th>Item</th><th class="num">Unit price</th><th>Quantity</th><th>Action</th></tr>
+        {% for line in view.lines %}
+        <tr data-price="{{ line.menuItem.price }}">
+          <td><b>{{ line.menuItem.name }}</b> <span class="muted">× <span class="q">{{ line.quantity }}</span></span>
+              <div class="small muted">Line total: <span class="lt">{{ money(line.lineTotal) }}</span>{% if line.specialInstructions %} · {{ line.specialInstructions }}{% endif %}</div></td>
+          <td class="num">{{ money(line.menuItem.price) }}</td>
+          <td><span class="stepper"><button type="button" onclick="step(this,-1)">−</button><input name="qty_{{ line.orderLineID }}" value="{{ line.quantity }}" inputmode="numeric" oninput="recalc()"><button type="button" onclick="step(this,1)">+</button></span></td>
+          <td><label class="check"><input type="checkbox" name="remove_{{ line.orderLineID }}" value="1" onchange="recalc()"> Remove</label></td>
+        </tr>
+        {% endfor %}
+      </table>
+      <div class="box-body" style="border-top:1px solid #d6d6d6">
+        <div id="adds"></div>
+        <button type="button" onclick="addRow()">+ Add Item</button>
+      </div>
+    </div>
+    <p class="hint">Special instructions are kept per item: type them when you add an item.</p>
+  </div>
+
+  <div class="box"><div class="box-body">
+    <h3>Updated Total</h3>
+    <table class="totals">
+      <tr><td>Subtotal</td><td class="num" id="sub">{{ money(view.subtotal) }}</td></tr>
+      {% if view.order.discountAmount %}<tr><td>Promotion</td><td class="num">recalculated on save</td></tr>{% endif %}
+      <tr class="grand"><td>Total</td><td class="num" id="tot">{{ money(view.subtotal) }} CAD</td></tr>
+    </table>
+    <div class="panel small" style="margin:12px 0">Totals update automatically when items or quantities change.</div>
+    <button class="primary block" style="margin-bottom:8px">Save Changes</button>
+    <a class="btn block" href="{{ url_for('orders') }}">Cancel Changes</a>
+  </div></div>
+</div>
+</form>
+
+<template id="add-row">
+  <div class="row" style="margin-bottom:10px" data-add>
+    <div class="field" style="flex:2"><label>Menu item</label>
+      <select name="add_item" onchange="recalc()">
+        {% for m in menu if m.isAvailable %}<option value="{{ m.menuItemID }}" data-price="{{ m.price }}">{{ m.name }} · {{ money(m.price) }}</option>{% endfor %}
+      </select></div>
+    <div class="field" style="max-width:90px"><label>Quantity</label><input name="add_qty" value="1" inputmode="numeric" oninput="recalc()"></div>
+    <div class="field" style="flex:2"><label>Instructions</label><input name="add_note" placeholder="optional"></div>
+    <button type="button" class="sm" onclick="this.parentElement.remove(); recalc()">Remove</button>
+  </div>
+</template>
+
+<script>
+const fmt = v => '$' + v.toFixed(2);
+function step(btn, d) {
+  const input = btn.parentElement.querySelector('input');
+  input.value = Math.max(0, (parseInt(input.value) || 0) + d);
+  recalc();
+}
+function addRow() {
+  document.getElementById('adds').appendChild(document.getElementById('add-row').content.cloneNode(true));
+  recalc();
+}
+function recalc() {
+  let sub = 0;
+  document.querySelectorAll('#lines tr[data-price]').forEach(tr => {
+    const q = parseInt(tr.querySelector('input[name^=qty_]').value) || 0;
+    const removed = tr.querySelector('input[type=checkbox]').checked || q <= 0;
+    const line = removed ? 0 : q * parseFloat(tr.dataset.price);
+    tr.querySelector('.q').textContent = removed ? 0 : q;
+    tr.querySelector('.lt').textContent = fmt(line);
+    tr.style.opacity = removed ? .45 : 1;
+    sub += line;
+  });
+  document.querySelectorAll('[data-add]').forEach(row => {
+    const opt = row.querySelector('select').selectedOptions[0];
+    sub += (parseInt(row.querySelector('input[name=add_qty]').value) || 0) * parseFloat(opt.dataset.price);
+  });
+  document.getElementById('sub').textContent = fmt(sub);
+  document.getElementById('tot').textContent = fmt(sub) + ' CAD';
+}
+</script>
+{% endblock %}

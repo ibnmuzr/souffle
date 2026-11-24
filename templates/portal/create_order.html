@@ -1,0 +1,120 @@
+{% extends "portal/base.html" %}
+{% from "macros.html" import money %}
+{% block title %}Create New Order{% endblock %}
+{% block content %}
+{% set order = view.order if view else None %}
+<div class="crumb">Orders / Create new order</div>
+<h1>Create New Order</h1>
+<p class="lead" style="margin-bottom:8px">Select products and quantities to start a customer order.</p>
+<p class="small"><b>Order ID:</b> {{ order.orderID if order else 'assigned when the first item is added' }} &nbsp;&nbsp; <b>Employee ID:</b> EMP{{ '%03d' | format(staff.employeeID) }}</p>
+
+<form method="post" action="{{ url_for('create_order_add') }}" id="add-form">
+  {% if order %}<input type="hidden" name="orderID" value="{{ order.orderID }}">{% endif %}
+  <div class="row" style="margin:16px 0 20px">
+    <div class="field" style="max-width:380px">
+      <label>Customer name (optional)</label>
+      {% if order %}
+        <input value="{{ view.customer_name }}" disabled>
+      {% else %}
+        <select name="customerID">
+          <option value="">Walk-in customer</option>
+          {% for c in customers %}<option value="{{ c.customerID }}">{{ c.name }}</option>{% endfor %}
+        </select>
+      {% endif %}
+    </div>
+    <div class="field" style="flex:0">
+      <label>Order type</label>
+      <div class="seg">
+        {% for value, label in [('takeout', 'Pickup'), ('in-store', 'In-store')] %}
+          <label><input type="radio" name="orderType" value="{{ value }}" {{ 'checked' if (order.orderType if order else 'takeout') == value }} {{ 'disabled' if order }}> {{ label }}</label>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="grid g-main">
+    <div>
+      <div class="actions split" style="margin-bottom:10px"><h2 style="margin:0">Menu Items</h2><span class="small muted">All prices in CAD</span></div>
+      <div class="chips" style="margin-bottom:10px" id="cats">
+        <a href="#" class="on" data-cat="">All</a>
+        {% for cat in menu | map(attribute='category') | unique %}<a href="#" data-cat="{{ cat }}">{{ cat }}</a>{% endfor %}
+      </div>
+      <input id="menu-search" placeholder="Search menu items" style="margin-bottom:10px">
+      <div class="box">
+        <table id="menu-table">
+          <tr><th>Item</th><th class="num">Price (CAD)</th><th>Quantity</th><th>Instructions</th><th>Action</th></tr>
+          {% for m in menu %}
+          <tr data-cat="{{ m.category }}" data-name="{{ m.name | lower }}">
+            <td>{{ m.name }}{% if not m.isAvailable %}<div class="small muted">not available</div>{% endif %}</td>
+            <td class="num">{{ money(m.price) }}</td>
+            <td><span class="stepper"><button type="button" onclick="step(this,-1)">−</button><input name="qty_{{ m.menuItemID }}" value="1" inputmode="numeric"><button type="button" onclick="step(this,1)">+</button></span></td>
+            <td><input name="note_{{ m.menuItemID }}" placeholder="optional" style="padding:5px 8px"></td>
+            <td><button class="sm" name="menuItemID" value="{{ m.menuItemID }}" {{ 'disabled' if not m.isAvailable }}>Add to Order</button></td>
+          </tr>
+          {% endfor %}
+        </table>
+      </div>
+    </div>
+
+    <div class="box">
+      <div class="box-body">
+        <h3>Order summary</h3>
+        <p class="small muted">Order {{ order.orderID if order else '—' }}</p>
+        {% if view and view.lines %}
+          <table class="totals">
+            {% for line in view.lines %}
+            <tr>
+              <td>{{ line.menuItem.name }} × {{ line.quantity }}
+                {% if line.specialInstructions %}<div class="small muted">{{ line.specialInstructions }}</div>{% endif %}
+                <button class="sm" form="remove-{{ line.orderLineID }}" style="border:none; padding:0; font-weight:400; text-decoration:underline">remove</button>
+              </td>
+              <td class="num">{{ money(line.lineTotal) }}</td>
+            </tr>
+            {% endfor %}
+          </table>
+        {% else %}
+          <div class="empty" style="padding:40px 10px"><b>No items added yet</b><br><span class="small">Choose a quantity, then select “Add to Order” from the menu.</span></div>
+        {% endif %}
+        <table class="totals" style="margin-top:10px"><tr class="grand"><td>Subtotal (CAD)</td><td class="num">{{ money(view.subtotal if view else 0) }}</td></tr></table>
+      </div>
+    </div>
+  </div>
+</form>
+
+{% if view %}{% for line in view.lines %}
+  <form id="remove-{{ line.orderLineID }}" method="post" action="{{ url_for('create_order_remove', orderID=order.orderID) }}"><input type="hidden" name="orderLineID" value="{{ line.orderLineID }}"></form>
+{% endfor %}{% endif %}
+
+<div class="actions split" style="border-top:1px solid #d6d6d6; padding-top:16px; margin-top:6px">
+  <span class="small muted">Add at least one item to continue.</span>
+  <div class="actions">
+    {% if order %}
+      <form method="post" action="{{ url_for('create_order_cancel', orderID=order.orderID) }}" class="inline" onsubmit="return confirm('Cancel this order? Nothing will be submitted.');"><button>Cancel</button></form>
+      <form method="post" action="{{ url_for('create_order_continue', orderID=order.orderID) }}" class="inline"><button class="primary" {{ 'disabled' if not view.lines }}>Continue</button></form>
+    {% else %}
+      <a class="btn" href="{{ url_for('orders') }}">Cancel</a>
+      <button disabled>Continue</button>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+function step(btn, d) {
+  const input = btn.parentElement.querySelector('input');
+  input.value = Math.max(1, (parseInt(input.value) || 1) + d);
+}
+let cat = '';
+function filterMenu() {
+  const q = document.getElementById('menu-search').value.toLowerCase();
+  document.querySelectorAll('#menu-table tr[data-cat]').forEach(tr => {
+    tr.style.display = (!cat || tr.dataset.cat === cat) && tr.dataset.name.includes(q) ? '' : 'none';
+  });
+}
+document.getElementById('menu-search').addEventListener('input', filterMenu);
+document.querySelectorAll('#cats a').forEach(a => a.addEventListener('click', e => {
+  e.preventDefault(); cat = a.dataset.cat;
+  document.querySelectorAll('#cats a').forEach(b => b.classList.toggle('on', b === a));
+  filterMenu();
+}));
+</script>
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends "portal/base.html" %}
+{% from "macros.html" import status %}
+{% block title %}Kitchen Orders{% endblock %}
+{% block content %}
+<div class="crumb">Orders / Kitchen</div>
+<h1>Kitchen Orders</h1>
+<p class="lead">View incoming orders and start preparation.</p>
+
+<div class="actions split" style="margin-bottom:8px"><h2 style="margin:0">Incoming orders</h2><span class="small muted">{{ incoming | length }} orders shown</span></div>
+<div class="box">
+  <table>
+    <tr><th></th><th>Order ID</th><th>Items</th><th class="num">Quantity</th><th>Pickup Time</th><th>Status</th></tr>
+    {% for v in incoming %}{% set sel = v.order.orderID == selected %}
+    <tr class="{{ 'sel' if sel }}" style="cursor:pointer" onclick="location.href='{{ url_for('kitchen', selected=v.order.orderID) }}'">
+      <td><input type="radio" {{ 'checked' if sel }} style="width:auto"></td>
+      <td>{% if sel %}<b>{{ v.order.orderID }}</b>{% else %}{{ v.order.orderID }}{% endif %}</td>
+      <td>{% for l in v.lines %}{{ l.quantity }} {{ l.menuItem.name }}{{ ', ' if not loop.last }}{% endfor %}</td>
+      <td class="num">{{ v.item_count }}</td>
+      <td>{{ v.pickup or '—' }}</td>
+      <td><span class="status">Pending</span></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6" class="empty">No incoming orders. Orders appear here once they are submitted.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+
+{% for v in incoming if v.order.orderID == selected %}
+<div class="box" style="background:#f2f2f2">
+  <div class="box-body actions">
+    <div style="flex:1"><b>Selected order: {{ v.order.orderID }}</b>
+      <div class="small muted">Pickup at {{ v.pickup or '—' }} · {{ v.item_count }} items · Pending</div></div>
+    <a class="btn" href="{{ url_for('track_order', orderID=v.order.orderID) }}">View Order</a>
+    <form method="post" action="{{ url_for('order_status', orderID=v.order.orderID) }}" class="inline">
+      <input type="hidden" name="action" value="start">
+      <input type="hidden" name="next" value="{{ url_for('track_order', orderID=v.order.orderID) }}">
+      <button class="primary">Start Preparation</button>
+    </form>
+  </div>
+  <div class="box-body small muted" style="border-top:1px solid #ccc; padding-top:10px">Start Preparation changes the selected order's status from Pending to In Progress.</div>
+</div>
+{% endfor %}
+
+<h2 style="margin-top:26px">In preparation</h2>
+<div class="box">
+  <table>
+    <tr><th>Order ID</th><th>Items</th><th>Ready around</th><th>Status</th><th></th></tr>
+    {% for v in preparing %}
+    <tr>
+      <td><b>{{ v.order.orderID }}</b></td>
+      <td>{% for l in v.lines %}{{ l.quantity }} {{ l.menuItem.name }}{{ ', ' if not loop.last }}{% endfor %}</td>
+      <td>{{ v.pickup or '—' }}</td>
+      <td>{{ status(v.order.orderStatus) }}</td>
+      <td class="actions" style="gap:6px">
+        <a class="btn sm" href="{{ url_for('track_order', orderID=v.order.orderID) }}">Track</a>
+        <form method="post" action="{{ url_for('order_status', orderID=v.order.orderID) }}" class="inline">
+          <input type="hidden" name="action" value="ready"><input type="hidden" name="next" value="{{ url_for('kitchen') }}">
+          <button class="sm primary">Mark as Ready</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5" class="empty">Nothing in preparation.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

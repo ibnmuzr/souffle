@@ -1,0 +1,30 @@
+{% extends "portal/base.html" %}
+{% block title %}Order Completed{% endblock %}
+{% block content %}
+<div class="crumb">Orders / Order {{ view.order.orderID }} / Completion</div>
+<h1>Order Completed</h1>
+<p class="lead">Order {{ view.order.orderID }} has been completed successfully.</p>
+
+<div class="box"><div class="box-body actions split">
+  <div><div class="small muted">Order status</div><div class="big" style="font-size:1.3rem">{{ view.order.orderStatus }}</div></div>
+  <span class="status solid" style="padding:8px 26px">{{ view.order.orderStatus | upper }}</span>
+</div></div>
+
+<div class="box">
+  <div class="box-head">Order record — {{ view.order.orderID }}</div>
+  <table>
+    <tr><td style="width:240px">Customer</td><td><b>{{ view.customer_name }}</b></td></tr>
+    <tr><td><b>Order status</b></td><td><b>{{ view.order.orderStatus }}</b></td></tr>
+    <tr><td>Payment status</td><td><b>{{ payment }}</b></td></tr>
+    <tr><td>Pickup status</td><td><b>Handed to Customer</b></td></tr>
+    <tr><td>Total paid</td><td><b>${{ '%.2f' | format(view.order.orderTotal) }} CAD</b></td></tr>
+  </table>
+</div>
+
+<div class="panel"><b>Order details saved successfully.</b> <span class="small muted">The sale is recorded in the Sales Database.</span></div>
+
+<div class="actions" style="justify-content:flex-end">
+  <a class="btn" href="{{ url_for('track_order', orderID=view.order.orderID) }}">View Order Details</a>
+  <a class="btn primary" href="{{ url_for('orders') }}">Return to Orders</a>
+</div>
+{% endblock %}

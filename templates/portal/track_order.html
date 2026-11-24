@@ -1,0 +1,92 @@
+{% extends "portal/base.html" %}
+{% from "macros.html" import money, status %}
+{% block title %}Track Order {{ view.order.orderID }}{% endblock %}
+{% block content %}
+{% set s = view.order.orderStatus %}
+<div class="page-head">
+  <div>
+    <div class="crumb">Orders / Order {{ view.order.orderID }} / Track order</div>
+    <h1>Track Order</h1>
+    <p class="lead" style="margin:0">Monitor preparation progress and update the order status.</p>
+  </div>
+  <a class="btn" href="{{ url_for('orders') }}">Back to Orders</a>
+</div>
+
+<div class="facts">
+  <div><div class="k">Order ID</div><div class="v">{{ view.order.orderID }}</div></div>
+  <div><div class="k">Customer</div><div class="v">{{ view.customer_name }}</div></div>
+  <div><div class="k">Current status</div><div class="v">{{ status(s) }}</div></div>
+  <div><div class="k">Estimated waiting time</div><div class="v">{% if s in ('Ordered', 'Sent', 'In progress') and view.wait is not none %}{{ view.wait }} minutes{% else %}—{% endif %}</div></div>
+  <div><div class="k">Payment</div><div class="v">{{ payment }}</div></div>
+</div>
+
+<h2>Order progress</h2>
+{% set steps = [('Pending', ['In process', 'Entered', 'Ordered', 'Sent']), ('In Progress', ['In progress']), ('Ready', ['Ready', 'Declined', 'Paid']), ('Completed', ['Completed'])] %}
+{% set ns = namespace(reached=true) %}
+<div class="progress">
+  {% for label, states in steps %}
+    {% if s in states %}<span class="step now">{{ label }}{% if s not in ('Ready', 'In progress', 'Completed') %} · {{ s }}{% endif %}</span>{% set ns.reached = false %}
+    {% elif ns.reached and s != 'Cancelled' %}<span class="step done">{{ label }}</span>
+    {% else %}<span class="step">{{ label }}</span>{% endif %}
+    {% if not loop.last %}<span class="arrow">→</span>{% endif %}
+  {% endfor %}
+</div>
+<p class="hint" style="margin-bottom:18px">{% if s == 'Cancelled' %}This order was cancelled.{% else %}Status and estimated waiting time update automatically.{% endif %}</p>
+
+<div class="grid g-main">
+  <div class="box">
+    <div class="box-head">Order details <span class="muted">{{ view.item_count }} items</span></div>
+    <table>
+      <tr><th>Item</th><th>Instructions</th><th class="num">Quantity</th><th class="num">Amount</th></tr>
+      {% for line in view.lines %}
+      <tr><td>{{ line.menuItem.name }}</td><td class="small">{{ line.specialInstructions or '—' }}</td><td class="num">{{ line.quantity }}</td><td class="num">{{ money(line.lineTotal) }}</td></tr>
+      {% endfor %}
+      <tr><td colspan="3"><b>Total (CAD){% if view.order.discountAmount %} · promotion −{{ money(view.order.discountAmount) }}{% endif %}</b></td><td class="num"><b>{{ money(view.order.orderTotal) }}</b></td></tr>
+    </table>
+  </div>
+
+  <div class="box"><div class="box-body">
+    <h3>Update status</h3>
+    {% if s in ('In process', 'Entered') %}
+      <a class="btn primary block" href="{{ url_for('create_order', orderID=view.order.orderID) }}" style="margin-bottom:8px">Continue Order</a>
+    {% elif s in ('Ordered', 'Sent') %}
+      <form method="post" action="{{ url_for('order_status', orderID=view.order.orderID) }}"><input type="hidden" name="action" value="start"><button class="primary block" style="margin-bottom:8px">Start Preparation</button></form>
+    {% endif %}
+    {% if s == 'In progress' %}
+      <form method="post" action="{{ url_for('order_status', orderID=view.order.orderID) }}"><input type="hidden" name="action" value="ready"><button class="primary block" style="margin-bottom:8px">Mark as Ready</button></form>
+    {% elif s not in ('Ready', 'Declined', 'Paid', 'Completed', 'Cancelled') %}
+      <button class="block" disabled style="margin-bottom:8px">Mark as Ready</button>
+    {% endif %}
+    {% if s in ('Ready', 'Declined') %}
+      <a class="btn primary block" href="{{ url_for('portal_pay', orderID=view.order.orderID) }}" style="margin-bottom:8px">Process Payment</a>
+    {% endif %}
+    <form method="post" action="{{ url_for('order_status', orderID=view.order.orderID) }}">
+      <input type="hidden" name="action" value="complete">
+      <button class="block {{ 'primary' if s == 'Paid' }}" {{ 'disabled' if s != 'Paid' }}>Mark as Completed</button>
+    </form>
+    <p class="hint">Available only when the order is Ready and payment is confirmed.</p>
+
+    {% if s == 'In progress' %}
+    <form method="post" action="{{ url_for('order_status', orderID=view.order.orderID) }}" style="border-top:1px solid #d6d6d6; margin-top:12px; padding-top:12px">
+      <input type="hidden" name="action" value="remake">
+      <label>Request remake (optional)</label>
+      <div class="row">
+        <div class="field"><select name="orderLineID">{% for line in view.lines %}<option value="{{ line.orderLineID }}">{{ line.menuItem.name }}</option>{% endfor %}</select></div>
+        <button class="sm">Remake</button>
+      </div>
+      <p class="hint">The estimated waiting time is recalculated.</p>
+    </form>
+    {% endif %}
+
+    {% if can_modify or can_cancel %}
+    <div class="actions" style="border-top:1px solid #d6d6d6; margin-top:12px; padding-top:12px">
+      {% if can_modify %}<a class="btn sm" href="{{ url_for('modify_order', orderID=view.order.orderID) }}">Modify Order</a>{% endif %}
+      {% if can_cancel %}<a class="btn sm" href="{{ url_for('cancel_order', orderID=view.order.orderID) }}">Cancel Order</a>{% endif %}
+    </div>
+    {% endif %}
+    {% if s in ('Paid', 'Completed') %}
+      <a class="btn sm" style="margin-top:12px" href="{{ url_for('portal_receipt', orderID=view.order.orderID) }}">View Receipt</a>
+    {% endif %}
+  </div></div>
+</div>
+{% endblock %}

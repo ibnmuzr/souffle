@@ -1,0 +1,36 @@
+{% extends "site/base.html" %}
+{% from "macros.html" import money, status %}
+{% block title %}My Orders{% endblock %}
+{% block content %}
+<div class="crumb">My Orders</div>
+<h1>My Orders</h1>
+<p class="lead">Follow your orders. Pay by card here once an order is Ready.</p>
+
+<div class="box">
+  <table>
+    <tr><th>Order ID</th><th>Date</th><th>Items</th><th class="num">Total (CAD)</th><th>Status</th><th>Payment</th><th>Pickup</th><th></th></tr>
+    {% for row in orders %}{% set v = row.view %}
+    <tr>
+      <td><b>{{ v.order.orderID }}</b></td>
+      <td>{{ v.order.orderDate }}</td>
+      <td class="small">{% for l in v.lines %}{{ l.quantity }} × {{ l.menuItem.name }}{{ ', ' if not loop.last }}{% endfor %}</td>
+      <td class="num">{{ money(v.order.orderTotal) }}</td>
+      <td>{{ status(v.order.orderStatus) }}</td>
+      <td class="small">{{ row.payment }}</td>
+      <td class="small">{{ v.pickup or '—' }}</td>
+      <td>
+        {% if v.order.orderStatus in ('Ready', 'Declined') %}
+          <a class="btn primary sm" href="{{ url_for('site_pay', orderID=v.order.orderID) }}">Pay now</a>
+        {% elif v.order.orderStatus in ('Paid', 'Completed') %}
+          <a class="btn sm" href="{{ url_for('site_receipt', orderID=v.order.orderID) }}">Receipt</a>
+        {% elif v.order.orderStatus == 'In process' %}
+          <a class="btn sm" href="{{ url_for('cart') }}">Open cart</a>
+        {% endif %}
+      </td>
+    </tr>
+    {% else %}
+      <tr><td colspan="8" class="empty">You have no orders yet.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

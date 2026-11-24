@@ -1,0 +1,62 @@
+{% extends "portal/base.html" %}
+{% from "macros.html" import money, status %}
+{% block title %}Manage Orders{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="crumb">Orders / Select order</div>
+    <h1>Manage Orders</h1>
+    <p class="lead" style="margin-bottom:0">Find an order by its ID, then select it to make changes.</p>
+  </div>
+  <div class="actions">
+    <a class="btn" href="{{ url_for('dashboard') }}">Back to Dashboard</a>
+    <a class="btn primary" href="{{ url_for('create_order_start') }}">Start New Order</a>
+  </div>
+</div>
+
+<div class="box"><div class="box-body">
+  <form method="get" class="row">
+    <div class="field" style="max-width:360px"><label>Search by Order ID</label><input name="q" placeholder="Enter order ID (e.g., ORD-0012)"></div>
+    <button class="primary">Search</button>
+  </form>
+</div></div>
+
+<div class="actions split" style="margin-bottom:12px">
+  <div class="chips">
+    <b class="small" style="margin-right:4px">Filter:</b>
+    <a href="{{ url_for('orders') }}" class="{{ 'on' if group == 'all' }}">All</a>
+    {% for key, (label, _) in groups.items() %}
+      <a href="{{ url_for('orders', status=key) }}" class="{{ 'on' if group == key }}">{{ label }}</a>
+    {% endfor %}
+  </div>
+  <span class="small muted">{{ orders | length }} orders shown</span>
+</div>
+
+<div class="box">
+  <table>
+    <tr><th>Order ID</th><th>Customer</th><th>Date</th><th>Type</th><th class="num">Total (CAD)</th><th>Status</th><th>Actions</th></tr>
+    {% for o in orders %}
+    <tr>
+      <td><b>{{ o.orderID }}</b></td>
+      <td>{{ o.customerName or 'Walk-in' }}</td>
+      <td>{{ 'Today' if o.orderDate == today|string else o.orderDate }}</td>
+      <td>{{ type_labels.get(o.orderType, o.orderType) }}</td>
+      <td class="num">{{ money(o.orderTotal) }}</td>
+      <td>{{ status(o.orderStatus) }}</td>
+      <td class="actions" style="gap:6px">
+        <a class="btn sm" href="{{ url_for('track_order', orderID=o.orderID) }}">View Details</a>
+        {% if o.orderStatus in ('In process',) %}
+          <a class="btn sm" href="{{ url_for('create_order', orderID=o.orderID) }}">Continue</a>
+        {% elif o.orderStatus in ('Entered', 'Ordered', 'Sent') %}
+          <a class="btn sm" href="{{ url_for('modify_order', orderID=o.orderID) }}">Modify</a>
+        {% elif o.orderStatus in ('Ready', 'Declined') %}
+          <a class="btn sm primary" href="{{ url_for('portal_pay', orderID=o.orderID) }}">Take Payment</a>
+        {% endif %}
+      </td>
+    </tr>
+    {% else %}
+      <tr><td colspan="7" class="empty">No orders in this view.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

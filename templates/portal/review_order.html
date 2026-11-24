@@ -1,0 +1,49 @@
+{% extends "portal/base.html" %}
+{% from "macros.html" import money, items_table, totals, status %}
+{% block title %}Review Order{% endblock %}
+{% block content %}
+<div class="crumb">Orders / Order {{ view.order.orderID }} / Review</div>
+<h1>Review Order</h1>
+<p class="lead">Verify the order details and total before submitting.</p>
+
+<div class="actions split" style="margin-bottom:12px">
+  <b>Order ID: {{ view.order.orderID }}</b>
+  <span>Order status: {{ status(view.order.orderStatus) }}</span>
+</div>
+
+<div class="facts">
+  <div><div class="k">Order type</div><div class="v">{{ view.type_label }}</div></div>
+  <div><div class="k">Customer</div><div class="v">{{ view.customer_name }}</div></div>
+  <div><div class="k">Pickup time</div><div class="v">{{ view.pickup or 'Given on submit' }}</div></div>
+  <div><div class="k">Currency</div><div class="v">Canadian dollars (CAD)</div></div>
+</div>
+
+<h2>Order summary</h2>
+<div class="grid g-main">
+  <div class="box">{{ items_table(view) }}</div>
+  <div>
+    <div class="box"><div class="box-body">{{ totals(view) }}</div></div>
+    {% if view.order.orderStatus in ('In process', 'Entered') %}
+    <div class="box"><div class="box-body">
+      <h3>Promotion</h3>
+      {% if promotions %}
+        <form method="post" action="{{ url_for('apply_promotion', orderID=view.order.orderID) }}">
+          <select name="promotionID" style="margin-bottom:8px">
+            {% for p in promotions %}<option value="{{ p.promotionID }}" {{ 'selected' if p.promotionID == view.order.promotionID }}>{{ p.title }} ({{ p.discountValue ~ '%' if p.discountType == 'percentage' else '$' ~ p.discountValue }} off)</option>{% endfor %}
+          </select>
+          <button class="sm">Apply Promotion</button>
+        </form>
+      {% else %}<p class="small muted">No promotion is running today.</p>{% endif %}
+    </div></div>
+    {% endif %}
+  </div>
+</div>
+
+<p class="small muted">Submitting sends this order to the kitchen for processing.</p>
+<div class="actions" style="border-top:1px solid #d6d6d6; padding-top:16px">
+  <a class="btn" href="{{ url_for('create_order', orderID=view.order.orderID) }}">Back</a>
+  <span class="spacer"></span>
+  <a class="btn" href="{{ url_for('create_order', orderID=view.order.orderID) }}">Modify Order</a>
+  <form method="post" action="{{ url_for('submit_order', orderID=view.order.orderID) }}" class="inline"><button class="primary">Submit Order</button></form>
+</div>
+{% endblock %}

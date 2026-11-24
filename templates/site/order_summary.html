@@ -1,0 +1,45 @@
+{% extends "site/base.html" %}
+{% from "macros.html" import money, totals %}
+{% block title %}Order Summary{% endblock %}
+{% block content %}
+<div class="crumb">Interaction 1 of 6 · Order summary · Output</div>
+<h1>Order Summary</h1>
+<p class="lead">Review your order and total before proceeding to payment.</p>
+
+{% if not view or not view.lines %}
+  <div class="box"><div class="empty">Your cart is empty.<br><br><a class="btn primary" href="{{ url_for('site_menu') }}">Browse the menu</a></div></div>
+{% else %}
+<div class="grid g-main">
+  <div>
+    <div class="box">
+      <div class="box-head">Order details <span class="muted">Order ID: {{ view.order.orderID }}</span></div>
+      <table>
+        <tr><th>Item</th><th class="num">Quantity</th><th class="num">Amount (CAD)</th></tr>
+        {% for line in view.lines %}
+        <tr>
+          <td>{{ line.menuItem.name }}<div class="small muted">{{ money(line.menuItem.price) }} each</div></td>
+          <td class="num">
+            <form class="inline" method="post" action="{{ url_for('cart_line') }}">
+              <input type="hidden" name="orderLineID" value="{{ line.orderLineID }}">
+              <input name="quantity" value="{{ line.quantity }}" style="width:56px; text-align:center" inputmode="numeric">
+              <button class="sm">Update</button>
+            </form>
+          </td>
+          <td class="num">{{ money(line.lineTotal) }}</td>
+        </tr>
+        {% endfor %}
+      </table>
+    </div>
+    <a class="btn" href="{{ url_for('site_menu') }}">Edit Order</a>
+    <p class="hint">Set a quantity to 0 to remove an item.</p>
+  </div>
+
+  <div class="panel" style="border-color:#222">
+    <h3>Order total</h3>
+    {{ totals(view) }}
+    <a class="btn primary block" style="margin-top:14px" href="{{ url_for('checkout') }}">Proceed to Payment</a>
+    <p class="hint">Next: choose how to pay.</p>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

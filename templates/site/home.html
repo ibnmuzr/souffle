@@ -1,0 +1,24 @@
+{% extends "site/base.html" %}
+{% from "macros.html" import money %}
+{% block title %}Home{% endblock %}
+{% block content %}
+<section class="hero">
+  <div class="crumb">Japanese cheesecake · Montréal</div>
+  <h1>Light, fluffy, freshly baked.</h1>
+  <p class="lead">Order online and pick up at Soufflé Eaton Centre. Pay by card online or in cash at pickup.</p>
+  <div class="actions">
+    <a class="btn primary" href="{{ url_for('site_menu') }}">Order now</a>
+    <a class="btn" href="{{ url_for('my_orders') }}">My Orders</a>
+  </div>
+</section>
+
+<h2>On the menu</h2>
+<div class="grid g-2">
+  {% for m in menu if m.isAvailable %}
+  <div class="box"><div class="box-body actions split">
+    <div><b>{{ m.name }}</b><div class="small muted">{{ m.category }}</div></div>
+    <b>{{ money(m.price) }}</b>
+  </div></div>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -16,6 +16,7 @@ BTM 495 team project (Fall 2026). This is a prototype of the to-be system for So
 | 2 | **Manage Employee Accounts (UC 03)** and **Manage Promotions (UC 05)**: create, validate (invalid information is refused), modify, delete accounts; create, save and edit drafts, share, validate and track promotions | Done |
 | 2 | Every operation of every class is implemented | Done |
 | 2 | Names and signatures match the **Milestone 5 implementation class diagram**; one main menu (`app.py`) opens every screen | Done |
+| 2 | **Web frontend** (`web_app.py`) following the **Milestone 6 HCI design**: customer website and employee portal, every wireframe screen and wireflow, calling the same class operations as the terminal screens | Done |
 
 Every operation in the Milestone 5 class diagram is in the code with the same name and parameters, and all of them are implemented.
 
@@ -28,6 +29,46 @@ python3 app.py                # main menu: opens the screen of every use case
 python3 main.py               # full demo: rebuilds the database and runs all six use cases
 python3 database/setup_db.py  # rebuild only the database with the sample data
 ```
+
+### Web frontend (in the browser)
+
+```bash
+pip install -r requirements.txt   # installs Flask, once
+python3 web_app.py                # then open http://127.0.0.1:5000
+```
+
+On Windows use `python` instead of `python3`. Stop the server with Ctrl+C.
+
+The web frontend follows the **Milestone 6 HCI design** (wireframes and wireflows). It has the two interfaces of the wireframes:
+
+| Interface | Address | Pages |
+|---|---|---|
+| Customer website | http://127.0.0.1:5000 | Home, Menu, Cart (Order Summary), Select Payment Method, Order Confirmed, My Orders, Pay by Card (Secure Card Payment, Enter Payment Information, Payment Status, Payment Successful) |
+| Employee portal | http://127.0.0.1:5000/portal | Sign-in, Dashboard, Orders, Kitchen, Menu, Inventory; Manager: Accounts, Promotions, Reports |
+
+Employee portal sign-in: `sam.t` / `changeme` (employee) or `alex.m` / `manager123` (manager). Manager approval of a cancellation: manager ID `1`, password `manager123`. The website is signed in as the customer Jordan Lee.
+
+Every button calls the operation from the class diagram, so the sequence diagrams are unchanged. For example "Submit Order" calls `OrderHandler.submitOrder`, "Confirm Payment" calls `Customer.payOrder` with a `CashPayment`, and "Save Changes" in the inventory calls `InventoryUI.updateQuantity`. What the classes print (kitchen messages, receipts, reports) is shown on the page. The terminal screens below still work and use the same `souffle.db`.
+
+| Milestone 6 user story | Screens (wireframe numbers) | Alternative wireflows covered |
+|---|---|---|
+| 6.1 Manage Inventory | 1 Inventory List (search by item ID or name), 2 Update Inventory Quantity, 3 Inventory Updated | Cancel, invalid quantity (not saved, error shown), return to inventory |
+| 6.2.1 Pay by Card | 01 Order Summary, 02 Select Payment Method, 03 Secure Card Payment, 04 Enter Payment Information, 05 Payment Status, 06 Payment Successful | Back and cancel, declined payment (Try Again / Change Payment Method), download and print receipt |
+| 6.2.2 Pay by Cash | Customer: 01 Order Summary, 02 Select Pay by Cash, 03 Order Confirmed. Employee: 03 Process Cash Payment, 04 Cash Payment Status (change due), 05 Payment Successful | Insufficient cash (payment stays pending, enter the amount again) |
+| 6.3.1 Create New Order | 01 Create New Order (menu with categories, search, quantity, instructions), 02 Review Order, 03 Order Submitted Successfully | Modify order from review, cancel order creation |
+| 6.3.2 Modify Order | 01 Manage Orders (search by order ID, status filter), 02 Modify Order (live totals), 03 Order Updated | Cancel changes, return to orders |
+| 6.3.3 Cancel Order | 01 Select order, 02 Cancel Order (reason, details, warning), 03 Cancellation Approval (manager ID and password) and confirmation | Not started: cancelled without approval. Wrong password or Reject: order unchanged. Paid order: refunded |
+| 6.3.4 Track and Complete Order | 01 Kitchen Orders, 02 Track Order (progress, estimated waiting time), 03 Order Completed | Request remake (new waiting time) |
+
+Differences from the wireframes, kept so the prototype follows the class diagram and state machine:
+- **Taxes**: the wireframes show GST and QST lines. The classes do not calculate taxes, so the pages show the subtotal, the promotion discount and the total that is actually charged.
+- **Pay by card online**: the order state machine allows a payment only once an order is Ready. The customer chooses card at checkout, the order goes to the kitchen, and the card screens (03 to 06) open from My Orders when the order is Ready.
+- **Order IDs** are the database IDs (`ORD-0016`) instead of `#SF1025`. Statuses are those of the state machine; the filter's "Pending" groups In process, Entered, Ordered and Sent.
+- **Card details** are only checked for format and are never stored; the terminal is simulated. A "simulate a declined card" box lets you test the declined path.
+- **Special instructions** are kept per item (as in `OrderLine`), so they are entered with each item rather than once per order.
+- Accounts, Promotions and Reports (UC 03, 05, 06) have no Milestone 6 wireframes; their pages use the same visual style.
+
+### Terminal screens
 
 Each screen can also be run on its own: `manage_orders.py`, `process_payments.py`, `manage_accounts.py`, `manage_inventory.py`, `manage_promotions.py`, `create_reports.py`.
 
@@ -125,6 +166,12 @@ manage_accounts.py      Interactive Manage Employee Accounts screen for the mana
 manage_promotions.py    Interactive Manage Promotions screen for the manager
 manage_inventory.py     Interactive Manage Inventory screen for the manager
 create_reports.py       Interactive Create Reports menu for the manager
+web_app.py              Web frontend (Milestone 6 HCI design), calling the classes in models/
+templates/site/         Customer website pages (Home, Menu, Order Summary, checkout, My Orders)
+templates/portal/       Employee portal pages (one per wireframe screen)
+templates/pay/          Card payment screens shared by the website and the portal
+static/style.css        Styles of the web frontend (black and white, as in the wireframes)
+requirements.txt        Flask, needed only for the web frontend
 models/                 Problem-domain classes, one file per use-case area
   people.py             Person (base class), Customer, Employee, Manager
   accounts.py           EmployeeAccount

@@ -1,0 +1,64 @@
+{% extends "site/base.html" %}
+{% from "macros.html" import money %}
+{% block title %}Menu{% endblock %}
+{% block content %}
+<div class="crumb">Menu</div>
+<h1>Menu</h1>
+<p class="lead">Choose your items and quantities. Your cart is saved as you add items.</p>
+
+<div class="grid g-main">
+  <div class="box">
+    <table>
+      <tr><th>Item</th><th class="num">Price (CAD)</th><th>Quantity</th><th>Action</th></tr>
+      {% for m in menu %}
+      <tr>
+        <td><b>{{ m.name }}</b><div class="small muted">{{ m.category }}{{ ' · not available' if not m.isAvailable }}</div></td>
+        <td class="num">{{ money(m.price) }}</td>
+        <td>
+          <span class="stepper">
+            <button type="button" onclick="step(this,-1)">−</button><input name="quantity" value="1" inputmode="numeric" form="add-{{ m.menuItemID }}"><button type="button" onclick="step(this,1)">+</button>
+          </span>
+        </td>
+        <td>
+          <form id="add-{{ m.menuItemID }}" method="post" action="{{ url_for('cart_add') }}" class="inline">
+            <input type="hidden" name="menuItemID" value="{{ m.menuItemID }}">
+            <button class="sm" {{ 'disabled' if not m.isAvailable }}>Add to Cart</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  <div class="box">
+    <div class="box-head">Your cart {% if cart %}<span class="muted">Order ID: {{ cart.order.orderID }}</span>{% endif %}</div>
+    <div class="box-body">
+      {% if cart and cart.lines %}
+        <table class="totals">
+          {% for line in cart.lines %}
+          <tr><td>{{ line.menuItem.name }} × {{ line.quantity }}
+                <form class="inline" method="post" action="{{ url_for('cart_line') }}">
+                  <input type="hidden" name="orderLineID" value="{{ line.orderLineID }}">
+                  <input type="hidden" name="quantity" value="0">
+                  <input type="hidden" name="next" value="{{ url_for('site_menu') }}">
+                  <button class="sm" style="padding:0 6px; border:none; text-decoration:underline; font-weight:400">remove</button>
+                </form></td>
+              <td class="num">{{ money(line.lineTotal) }}</td></tr>
+          {% endfor %}
+          <tr class="grand"><td>Total (CAD)</td><td class="num">{{ money(cart.order.orderTotal) }}</td></tr>
+        </table>
+        <a class="btn primary block" style="margin-top:14px" href="{{ url_for('cart') }}">Review Order</a>
+      {% else %}
+        <p class="empty" style="padding:14px 0">No items added yet.<br><span class="small">Choose a quantity, then select “Add to Cart”.</span></p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script>
+function step(btn, d) {
+  const input = btn.parentElement.querySelector('input');
+  input.value = Math.max(1, (parseInt(input.value) || 1) + d);
+}
+</script>
+{% endblock %}

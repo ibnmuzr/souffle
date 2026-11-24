@@ -1,0 +1,46 @@
+{% extends "portal/base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="crumb">Dashboard</div>
+    <h1>Dashboard</h1>
+    <p class="lead">Soufflé Eaton Centre · {{ today }}</p>
+  </div>
+  <span class="role">{{ staff.role }}</span>
+</div>
+
+<div class="grid g-4" style="margin-bottom:22px">
+  <a class="stat" href="{{ url_for('orders', status='pending') }}"><div class="num">{{ counts.pending }}</div><div class="lbl">Pending orders</div></a>
+  <a class="stat" href="{{ url_for('kitchen') }}"><div class="num">{{ counts.kitchen }}</div><div class="lbl">In preparation</div></a>
+  <a class="stat" href="{{ url_for('orders', status='ready') }}"><div class="num">{{ counts.to_pay }}</div><div class="lbl">Ready, waiting for payment</div></a>
+  <a class="stat" href="{{ url_for('inventory', low=1) }}"><div class="num">{{ counts.low }}</div><div class="lbl">Inventory items below minimum</div></a>
+</div>
+
+<div class="grid g-2">
+  <div class="box"><div class="box-head">Orders</div><div class="box-body">
+    <p class="small muted">Create, modify, cancel, track and complete orders. Take cash payments at the counter.</p>
+    <div class="actions">
+      <a class="btn primary" href="{{ url_for('create_order_start') }}">Start New Order</a>
+      <a class="btn" href="{{ url_for('orders') }}">Manage Orders</a>
+      <a class="btn" href="{{ url_for('kitchen') }}">Kitchen Orders</a>
+    </div>
+  </div></div>
+  <div class="box"><div class="box-head">Manager</div><div class="box-body">
+    <p class="small muted">Inventory, employee accounts, promotions and reports.</p>
+    <div class="actions">
+      <a class="btn" href="{{ url_for('inventory') }}">Inventory</a>
+      <a class="btn" href="{{ url_for('accounts') }}">Accounts</a>
+      <a class="btn" href="{{ url_for('promotions') }}">Promotions</a>
+      <a class="btn" href="{{ url_for('reports') }}">Reports</a>
+    </div>
+  </div></div>
+</div>
+
+<div class="box"><div class="box-body actions split">
+  <span class="small muted">Prototype: start again from the sample data. Every change is erased.</span>
+  <form method="post" action="{{ url_for('reset') }}" class="inline" onsubmit="return confirm('Erase every change and load the sample data again?');">
+    <button class="sm">Reset the sample data</button>
+  </form>
+</div></div>
+{% endblock %}
