@@ -1,5 +1,11 @@
 {% macro money(value) -%}${{ '%.2f' | format(value or 0) }}{%- endmacro %}
 
+{% macro menu_photo(item) -%}
+  {% set placeholder = url_for('static', filename='images/menu-placeholder.svg') %}
+  <img class="menu-card__photo" src="{{ item.imageURL or placeholder }}" alt="{{ item.name }}"
+       loading="lazy" onerror="this.onerror=null;this.src='{{ placeholder }}'">
+{%- endmacro %}
+
 {% macro status(s) -%}
   {%- set bad = s in ('Declined', 'Cancelled', 'Awaiting Manager Approval') -%}
   {%- set good = s in ('Paid', 'Accepted', 'approved', 'Completed') -%}

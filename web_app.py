@@ -26,7 +26,7 @@ from flask import (Flask, Response, flash, redirect, render_template, request,
                    send_from_directory, session, url_for)
 
 from database.connection import DB_PATH, get_connection
-from database.setup_db import create_database
+from database.setup_db import create_database, migrate_database
 from models import (CardPayment, CashPayment, CustomerLoyaltyReport, InventoryReport,
                     InventoryUI, OrderHandler, Promotion, Receipt, SalesReport)
 from models.inventory import load_inventory
@@ -223,6 +223,7 @@ def handler():
 def make_sure_database_exists():
     if not DB_PATH.exists():
         create_database()
+    migrate_database()
 
 
 @app.context_processor

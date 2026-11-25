@@ -435,6 +435,7 @@ class MenuItem:
     category: str
     price: float
     isAvailable: bool
+    imageURL: Optional[str] = None
 
     def checkAvailability(self, menuItemID: int, quantity: int) -> bool:
         """True when this item is on sale and the requested quantity is valid."""
@@ -461,7 +462,7 @@ def load_menu_item(menuItemID: int) -> MenuItem:
     if r is None:
         raise ValueError(f"There is no menu item {menuItemID}.")
     return MenuItem(r["menuItemID"], r["name"], r["description"], r["category"], r["price"],
-                    bool(r["isAvailable"]))
+                    bool(r["isAvailable"]), r["imageURL"] if "imageURL" in r.keys() else None)
 
 
 def load_menu() -> List[MenuItem]:

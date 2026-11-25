@@ -21,13 +21,13 @@ INSERT INTO inventories VALUES
   (1, 1, '2026-10-22'),
   (2, 2, '2026-10-22');
 
-INSERT INTO menu_items (menuItemID, name, description, category, price, isAvailable) VALUES
-  (1, 'Japanese Cheesecake 4" (Small)',   'Fresh-baked, choice of toppings', 'Cheesecake',     7.99, 1),
-  (2, 'Japanese Cheesecake 6" (Regular)', 'Fresh-baked, choice of toppings', 'Cheesecake',    15.99, 1),
-  (3, 'Japanese Cheesecake 8" (Large)',   'Fresh-baked, choice of toppings', 'Cheesecake',    24.99, 1),
-  (4, 'Japanese Tart',                    'Single tart',                     'Tart',           4.99, 1),
-  (5, 'Americano',                        'Hot coffee',                      'Hot Beverages',  3.49, 1),
-  (6, 'Latte',                            'Hot coffee with milk',            'Hot Beverages',  4.49, 1);
+INSERT INTO menu_items (menuItemID, name, description, category, price, isAvailable, imageURL) VALUES
+  (1, 'Japanese Cheesecake 4" (Small)',   'Fresh-baked, choice of toppings', 'Cheesecake',     7.99, 1, NULL),
+  (2, 'Japanese Cheesecake 6" (Regular)', 'Fresh-baked, choice of toppings', 'Cheesecake',    15.99, 1, NULL),
+  (3, 'Japanese Cheesecake 8" (Large)',   'Fresh-baked, choice of toppings', 'Cheesecake',    24.99, 1, NULL),
+  (4, 'Japanese Tart',                    'Single tart',                     'Tart',           4.99, 1, NULL),
+  (5, 'Americano',                        'Hot coffee',                      'Hot Beverages',  3.49, 1, NULL),
+  (6, 'Latte',                            'Hot coffee with milk',            'Hot Beverages',  4.49, 1, NULL);
 
 -- menuItemID links an ingredient to the menu item it is mainly used for (NULL for supplies)
 INSERT INTO inventory_items (itemID, inventoryID, menuItemID, itemName, quantity, minimumQuantity) VALUES
@@ -154,7 +154,62 @@ def create_database(path=DB_PATH, seed=True):
         conn.executescript(SEED)
     conn.commit()
     conn.close()
+    migrate_database(path)
     return path
+
+
+def migrate_database(path=DB_PATH):
+    """Add menu image URLs to an existing database without replacing its data."""
+    path = Path(path)
+    if not path.exists():
+        return
+
+    conn = sqlite3.connect(path)
+    try:
+        tables = {row[0] for row in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type = 'table'")}
+        if "menu_items" not in tables:
+            return
+        columns = {row[1] for row in conn.execute("PRAGMA table_info(menu_items)")}
+        if "imageURL" not in columns:
+            conn.execute("ALTER TABLE menu_items ADD COLUMN imageURL TEXT")
+        names = tuple(MENU_ITEM_IMAGES)
+        placeholders = ",".join("?" for _ in names)
+        missing_image = conn.execute(
+            "SELECT 1 FROM menu_items WHERE (imageURL IS NULL OR TRIM(imageURL) = '') "
+            f"AND name IN ({placeholders}) LIMIT 1", names).fetchone()
+        if missing_image is None:
+            conn.commit()
+            return
+        for name, image_url in MENU_ITEM_IMAGES.items():
+            conn.execute("UPDATE menu_items SET imageURL = ? WHERE name = ? "
+                         "AND (imageURL IS NULL OR TRIM(imageURL) = '')",
+                         (image_url, name))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+MENU_ITEM_IMAGES = {
+    'Japanese Cheesecake 4" (Small)': (
+        "https://images.unsplash.com/photo-1578985545062-69928b1d9587"
+        "?auto=format&fit=crop&w=800&q=80"),
+    'Japanese Cheesecake 6" (Regular)': (
+        "https://images.unsplash.com/photo-1565958011703-44f9829ba187"
+        "?auto=format&fit=crop&w=800&q=80"),
+    'Japanese Cheesecake 8" (Large)': (
+        "https://images.unsplash.com/photo-1571115177098-24ec42ed204d"
+        "?auto=format&fit=crop&w=800&q=80"),
+    "Japanese Tart": (
+        "https://images.unsplash.com/photo-1488477181946-6428a0291777"
+        "?auto=format&fit=crop&w=800&q=80"),
+    "Americano": (
+        "https://images.unsplash.com/photo-1509042239860-a550ce710b93"
+        "?auto=format&fit=crop&w=800&q=80"),
+    "Latte": (
+        "https://images.unsplash.com/photo-1461023058943-07fcbe16d735"
+        "?auto=format&fit=crop&w=800&q=80"),
+}
 
 
 if __name__ == "__main__":

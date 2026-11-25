@@ -1,5 +1,5 @@
 {% extends "portal/base.html" %}
-{% from "macros.html" import money %}
+{% from "macros.html" import menu_photo, money %}
 {% block title %}Create New Order{% endblock %}
 {% block content %}
 {% set order = view.order if view else None %}
@@ -40,19 +40,36 @@
         {% for cat in menu | map(attribute='category') | unique %}<a href="#" data-cat="{{ cat }}">{{ cat }}</a>{% endfor %}
       </div>
       <input id="menu-search" placeholder="Search menu items" style="margin-bottom:10px">
-      <div class="box">
-        <table id="menu-table">
-          <tr><th>Item</th><th class="num">Price (CAD)</th><th>Quantity</th><th>Instructions</th><th>Action</th></tr>
-          {% for m in menu %}
-          <tr data-cat="{{ m.category }}" data-name="{{ m.name | lower }}">
-            <td>{{ m.name }}{% if not m.isAvailable %}<div class="small muted">not available</div>{% endif %}</td>
-            <td class="num">{{ money(m.price) }}</td>
-            <td><span class="stepper"><button type="button" onclick="step(this,-1)">−</button><input name="qty_{{ m.menuItemID }}" value="1" inputmode="numeric"><button type="button" onclick="step(this,1)">+</button></span></td>
-            <td><input name="note_{{ m.menuItemID }}" placeholder="optional" style="padding:5px 8px"></td>
-            <td><button class="sm" name="menuItemID" value="{{ m.menuItemID }}" {{ 'disabled' if not m.isAvailable }}>Add to Order</button></td>
-          </tr>
-          {% endfor %}
-        </table>
+      <div class="menu-cards" id="menu-items">
+        {% for m in menu %}
+        <article class="menu-card" data-cat="{{ m.category }}" data-name="{{ m.name | lower }}">
+          {{ menu_photo(m) }}
+          <div class="menu-card__body">
+            <div class="menu-card__meta">
+              <span>{{ m.category }}</span>
+              {% if not m.isAvailable %}<span class="status bad">Not available</span>{% endif %}
+            </div>
+            <h2>{{ m.name }}</h2>
+            <p class="menu-card__description">{{ m.description or 'Freshly prepared with care.' }}</p>
+            <div class="menu-card__footer">
+              <strong class="menu-card__price">{{ money(m.price) }}</strong>
+              <div class="field">
+                <label for="qty-{{ m.menuItemID }}">Quantity</label>
+                <span class="stepper">
+                  <button type="button" aria-label="Decrease {{ m.name }} quantity" onclick="step(this,-1)">−</button>
+                  <input id="qty-{{ m.menuItemID }}" name="qty_{{ m.menuItemID }}" value="1" inputmode="numeric">
+                  <button type="button" aria-label="Increase {{ m.name }} quantity" onclick="step(this,1)">+</button>
+                </span>
+              </div>
+              <div class="field">
+                <label for="note-{{ m.menuItemID }}">Instructions</label>
+                <input id="note-{{ m.menuItemID }}" name="note_{{ m.menuItemID }}" placeholder="Optional">
+              </div>
+              <button class="sm" name="menuItemID" value="{{ m.menuItemID }}" {{ 'disabled' if not m.isAvailable }}>Add to Order</button>
+            </div>
+          </div>
+        </article>
+        {% endfor %}
       </div>
     </div>
 
@@ -106,8 +123,8 @@ function step(btn, d) {
 let cat = '';
 function filterMenu() {
   const q = document.getElementById('menu-search').value.toLowerCase();
-  document.querySelectorAll('#menu-table tr[data-cat]').forEach(tr => {
-    tr.style.display = (!cat || tr.dataset.cat === cat) && tr.dataset.name.includes(q) ? '' : 'none';
+  document.querySelectorAll('#menu-items [data-cat]').forEach(item => {
+    item.style.display = (!cat || item.dataset.cat === cat) && item.dataset.name.includes(q) ? '' : 'none';
   });
 }
 document.getElementById('menu-search').addEventListener('input', filterMenu);

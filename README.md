@@ -64,6 +64,11 @@ functionality. The portal profile page is available at `/portal/profile`.
 
 Every button calls the operation from the class diagram, so the sequence diagrams are unchanged. For example "Submit Order" calls `OrderHandler.submitOrder`, "Confirm Payment" calls `Customer.payOrder` with a `CashPayment`, and "Save Changes" in the inventory calls `InventoryUI.updateQuantity`. What the classes print (kitchen messages, receipts, reports) is shown on the page. The terminal screens below still work and use the same `souffle.db`.
 
+Menu items are stored in `menu_items`; the optional `imageURL` column supplies their
+photos. Existing databases gain this column automatically, sample products receive
+matching food-photo URLs, and items without a working image use the bundled placeholder.
+The customer and employee menus use responsive cards with consistently cropped images.
+
 | Milestone 6 user story | Screens (wireframe numbers) | Alternative wireflows covered |
 |---|---|---|
 | 6.1 Manage Inventory | 1 Inventory List (search by item ID or name), 2 Update Inventory Quantity, 3 Inventory Updated | Cancel, invalid quantity (not saved, error shown), return to inventory |
@@ -185,6 +190,7 @@ templates/site/         Customer website pages (Home, Menu, Order Summary, check
 templates/portal/       Employee portal pages (one per wireframe screen)
 templates/pay/          Card payment screens shared by the website and the portal
 static/style.css        Styles of the web frontend (black and white, as in the wireframes)
+static/images/          Local menu photo placeholder
 requirements.txt        Flask, needed only for the web frontend
 models/                 Problem-domain classes, one file per use-case area
   people.py             Person (base class), Customer, Employee, Manager
