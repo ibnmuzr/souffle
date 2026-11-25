@@ -173,18 +173,33 @@ def migrate_database(path=DB_PATH):
         columns = {row[1] for row in conn.execute("PRAGMA table_info(menu_items)")}
         if "imageURL" not in columns:
             conn.execute("ALTER TABLE menu_items ADD COLUMN imageURL TEXT")
-        names = tuple(MENU_ITEM_IMAGES)
-        placeholders = ",".join("?" for _ in names)
-        missing_image = conn.execute(
-            "SELECT 1 FROM menu_items WHERE (imageURL IS NULL OR TRIM(imageURL) = '') "
-            f"AND name IN ({placeholders}) LIMIT 1", names).fetchone()
-        if missing_image is None:
+        image_updates = []
+        params = []
+        for name in MENU_ITEM_IMAGES:
+            previous_urls = PREVIOUS_MENU_ITEM_IMAGES.get(name, ())
+            clause = "(name = ? AND (imageURL IS NULL OR TRIM(imageURL) = ''"
+            params.append(name)
+            if previous_urls:
+                placeholders = ",".join("?" for _ in previous_urls)
+                clause += f" OR imageURL IN ({placeholders})"
+                params.extend(previous_urls)
+            image_updates.append(clause + "))")
+        needs_update = conn.execute(
+            f"SELECT 1 FROM menu_items WHERE {' OR '.join(image_updates)} LIMIT 1",
+            params).fetchone()
+        if needs_update is None:
             conn.commit()
             return
         for name, image_url in MENU_ITEM_IMAGES.items():
-            conn.execute("UPDATE menu_items SET imageURL = ? WHERE name = ? "
-                         "AND (imageURL IS NULL OR TRIM(imageURL) = '')",
-                         (image_url, name))
+            previous_urls = PREVIOUS_MENU_ITEM_IMAGES.get(name, ())
+            condition = "imageURL IS NULL OR TRIM(imageURL) = ''"
+            params = [image_url, name]
+            if previous_urls:
+                placeholders = ",".join("?" for _ in previous_urls)
+                condition += f" OR imageURL IN ({placeholders})"
+                params.extend(previous_urls)
+            conn.execute(f"UPDATE menu_items SET imageURL = ? WHERE name = ? AND ({condition})",
+                         params)
         conn.commit()
     finally:
         conn.close()
@@ -192,23 +207,41 @@ def migrate_database(path=DB_PATH):
 
 MENU_ITEM_IMAGES = {
     'Japanese Cheesecake 4" (Small)': (
-        "https://images.unsplash.com/photo-1578985545062-69928b1d9587"
-        "?auto=format&fit=crop&w=800&q=80"),
+        "/static/images/menu/souffle-cheesecake-small.png"),
     'Japanese Cheesecake 6" (Regular)': (
-        "https://images.unsplash.com/photo-1565958011703-44f9829ba187"
-        "?auto=format&fit=crop&w=800&q=80"),
+        "/static/images/menu/souffle-cheesecake-regular.png"),
     'Japanese Cheesecake 8" (Large)': (
-        "https://images.unsplash.com/photo-1571115177098-24ec42ed204d"
-        "?auto=format&fit=crop&w=800&q=80"),
+        "/static/images/menu/souffle-cheesecake-large.png"),
     "Japanese Tart": (
+        "https://chefstrawlicious.one/wp-content/uploads/2025/12/4-26.webp"),
+    "Americano": (
+        "https://res.cloudinary.com/joe-coffee/image/upload/"
+        "v1572900558/menu-items/zjslvvn4zpqsbevdenvu.jpg"),
+    "Latte": (
+        "https://images.unsplash.com/photo-1461023058943-07fcbe16d735"
+        "?auto=format&fit=crop&w=800&q=80"),
+}
+
+PREVIOUS_MENU_ITEM_IMAGES = {
+    'Japanese Cheesecake 4" (Small)': (
+        "/static/images/menu/souffle-cheesecake-small.svg",
+        "https://images.unsplash.com/photo-1578985545062-69928b1d9587"
+        "?auto=format&fit=crop&w=800&q=80",),
+    'Japanese Cheesecake 6" (Regular)': (
+        "/static/images/menu/souffle-cheesecake-regular.svg",
+        "https://images.unsplash.com/photo-1565958011703-44f9829ba187"
+        "?auto=format&fit=crop&w=800&q=80",),
+    'Japanese Cheesecake 8" (Large)': (
+        "/static/images/menu/souffle-cheesecake-large.svg",
+        "https://images.unsplash.com/photo-1571115177098-24ec42ed204d"
+        "?auto=format&fit=crop&w=800&q=80",),
+    "Japanese Tart": (
+        "/static/images/menu/japanese-tart.svg",
         "https://images.unsplash.com/photo-1488477181946-6428a0291777"
         "?auto=format&fit=crop&w=800&q=80"),
     "Americano": (
         "https://images.unsplash.com/photo-1509042239860-a550ce710b93"
-        "?auto=format&fit=crop&w=800&q=80"),
-    "Latte": (
-        "https://images.unsplash.com/photo-1461023058943-07fcbe16d735"
-        "?auto=format&fit=crop&w=800&q=80"),
+        "?auto=format&fit=crop&w=800&q=80",),
 }
 
 

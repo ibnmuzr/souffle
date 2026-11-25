@@ -66,7 +66,7 @@ Every button calls the operation from the class diagram, so the sequence diagram
 
 Menu items are stored in `menu_items`; the optional `imageURL` column supplies their
 photos. Existing databases gain this column automatically, sample products receive
-matching food-photo URLs, and items without a working image use the bundled placeholder.
+matching food images, and items without a working image use the bundled placeholder.
 The customer and employee menus use responsive cards with consistently cropped images.
 
 | Milestone 6 user story | Screens (wireframe numbers) | Alternative wireflows covered |
@@ -190,7 +190,7 @@ templates/site/         Customer website pages (Home, Menu, Order Summary, check
 templates/portal/       Employee portal pages (one per wireframe screen)
 templates/pay/          Card payment screens shared by the website and the portal
 static/style.css        Styles of the web frontend (black and white, as in the wireframes)
-static/images/          Local menu photo placeholder
+static/images/          Menu product illustrations and local photo placeholder
 requirements.txt        Flask, needed only for the web frontend
 models/                 Problem-domain classes, one file per use-case area
   people.py             Person (base class), Customer, Employee, Manager
