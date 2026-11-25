@@ -2,23 +2,48 @@
 {% from "macros.html" import money %}
 {% block title %}Home{% endblock %}
 {% block content %}
-<section class="hero">
-  <div class="crumb">Japanese cheesecake · Montréal</div>
-  <h1>Light, fluffy, freshly baked.</h1>
-  <p class="lead">Order online and pick up at Soufflé Eaton Centre. Pay by card online or in cash at pickup.</p>
-  <div class="actions">
-    <a class="btn primary" href="{{ url_for('site_menu') }}">Order now</a>
-    <a class="btn" href="{{ url_for('my_orders') }}">My Orders</a>
+<section class="hero site-hero">
+  <div class="hero-copy">
+    <div class="site-eyebrow"><span></span> Japanese cheesecake · Montréal</div>
+    <h1>A little cloud<br>of <em>happiness.</em></h1>
+    <p class="lead">Meet the cheesecake that melts in your mouth. Baked fresh, delicately jiggly, and made to be shared.</p>
+    <div class="actions site-hero-actions">
+      <a class="btn primary" href="{{ url_for('site_menu') }}">Explore the menu <span aria-hidden="true">→</span></a>
+      <a class="site-text-link" href="{{ url_for('my_orders') }}">Track your order</a>
+    </div>
+    <div class="hero-note"><span class="matcha-dot"></span> Freshly baked in Montréal · Pickup at Eaton Centre</div>
+  </div>
+  <div class="hero-photo">
+    <img src="https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&amp;fit=crop&amp;w=1400&amp;q=85"
+         alt="Freshly baked Japanese cheesecake, golden and soft" fetchpriority="high">
+    <div class="photo-caption"><span class="matcha-sprig" aria-hidden="true">✳</span><span>Soft as a cloud<br><b>Made fresh daily</b></span></div>
   </div>
 </section>
 
-<h2>On the menu</h2>
-<div class="grid g-2">
+<section class="signature-section">
+  <div class="section-heading">
+    <div><div class="site-eyebrow"><span></span> The good stuff</div><h2>Our little slice of Japan</h2></div>
+    <a class="site-text-link" href="{{ url_for('site_menu') }}">See the full menu <span aria-hidden="true">→</span></a>
+  </div>
+  <div class="signature-grid">
   {% for m in menu if m.isAvailable %}
-  <div class="box"><div class="box-body actions split">
-    <div><b>{{ m.name }}</b><div class="small muted">{{ m.category }}</div></div>
-    <b>{{ money(m.price) }}</b>
-  </div></div>
+    {% if loop.index <= 3 %}
+    <article class="signature-card">
+      <div class="signature-card-art" aria-hidden="true"><span>✳</span></div>
+      <div class="signature-card-info">
+        <div><span class="signature-category">{{ m.category }}</span><h3>{{ m.name }}</h3></div>
+        <b>{{ money(m.price) }}</b>
+      </div>
+      {% if m.description %}<p>{{ m.description }}</p>{% endif %}
+    </article>
+    {% endif %}
   {% endfor %}
-</div>
+  </div>
+</section>
+
+<section class="pickup-banner">
+  <span class="pickup-icon" aria-hidden="true">↗</span>
+  <div><b>A fresh-baked moment is just around the corner.</b><p>Order ahead and pick up at Soufflé Eaton Centre.</p></div>
+  <a class="btn" href="{{ url_for('site_menu') }}">Order for pickup</a>
+</section>
 {% endblock %}

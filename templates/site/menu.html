@@ -3,34 +3,36 @@
 {% block title %}Menu{% endblock %}
 {% block content %}
 <div class="crumb">Menu</div>
-<h1>Menu</h1>
-<p class="lead">Choose your items and quantities. Your cart is saved as you add items.</p>
+<div class="menu-heading">
+  <div><h1>Made with a little magic.</h1><p class="lead">Choose your favourites. Your cart is saved as you add items.</p></div>
+  <span class="menu-fresh"><span class="matcha-dot"></span> Baked fresh daily</span>
+</div>
 
 <div class="grid g-main">
-  <div class="box">
-    <table>
-      <tr><th>Item</th><th class="num">Price (CAD)</th><th>Quantity</th><th>Action</th></tr>
-      {% for m in menu %}
-      <tr>
-        <td><b>{{ m.name }}</b><div class="small muted">{{ m.category }}{{ ' · not available' if not m.isAvailable }}</div></td>
-        <td class="num">{{ money(m.price) }}</td>
-        <td>
+  <div class="menu-products">
+    {% for m in menu %}
+    <article class="menu-product{{ ' unavailable' if not m.isAvailable }}">
+      <div class="product-art" aria-hidden="true"><span>✳</span></div>
+      <div class="product-body">
+        <div class="product-topline"><span class="signature-category">{{ m.category }}</span><b>{{ money(m.price) }}</b></div>
+        <h2>{{ m.name }}</h2>
+        {% if m.description %}<p>{{ m.description }}</p>{% endif %}
+        {% if not m.isAvailable %}<div class="unavailable-note">Currently unavailable</div>{% endif %}
+        <div class="product-controls">
           <span class="stepper">
-            <button type="button" onclick="step(this,-1)">−</button><input name="quantity" value="1" inputmode="numeric" form="add-{{ m.menuItemID }}"><button type="button" onclick="step(this,1)">+</button>
+            <button type="button" aria-label="Decrease {{ m.name }} quantity" onclick="step(this,-1)">−</button><input name="quantity" aria-label="{{ m.name }} quantity" value="1" inputmode="numeric" form="add-{{ m.menuItemID }}"><button type="button" aria-label="Increase {{ m.name }} quantity" onclick="step(this,1)">+</button>
           </span>
-        </td>
-        <td>
-          <form id="add-{{ m.menuItemID }}" method="post" action="{{ url_for('cart_add') }}" class="inline">
+          <form id="add-{{ m.menuItemID }}" method="post" action="{{ url_for('cart_add') }}">
             <input type="hidden" name="menuItemID" value="{{ m.menuItemID }}">
-            <button class="sm" {{ 'disabled' if not m.isAvailable }}>Add to Cart</button>
+            <button class="primary" {{ 'disabled' if not m.isAvailable }}>Add to Cart</button>
           </form>
-        </td>
-      </tr>
-      {% endfor %}
-    </table>
+        </div>
+      </div>
+    </article>
+    {% endfor %}
   </div>
 
-  <div class="box">
+  <aside class="box menu-cart">
     <div class="box-head">Your cart {% if cart %}<span class="muted">Order ID: {{ cart.order.orderID }}</span>{% endif %}</div>
     <div class="box-body">
       {% if cart and cart.lines %}
@@ -52,7 +54,7 @@
         <p class="empty" style="padding:14px 0">No items added yet.<br><span class="small">Choose a quantity, then select “Add to Cart”.</span></p>
       {% endif %}
     </div>
-  </div>
+  </aside>
 </div>
 
 <script>
