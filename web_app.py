@@ -180,6 +180,19 @@ def staff_required(view):
     return wrapper
 
 
+def manager_required(view):
+    @wraps(view)
+    def wrapper(*args, **kwargs):
+        staff = current_staff()
+        if staff is None:
+            return redirect(url_for("portal_login", next=request.path))
+        if not staff["managerID"]:
+            flash("Manager access is required for that page.", "error")
+            return redirect(url_for("dashboard"))
+        return view(*args, **kwargs)
+    return wrapper
+
+
 def current_staff():
     """The signed-in employee, and whether they are also a manager."""
     employeeID = session.get("employeeID")
@@ -521,6 +534,24 @@ def portal_logout():
     return redirect(url_for("portal_login"))
 
 
+@app.route("/portal/profile", methods=["GET", "POST"])
+@staff_required
+def portal_profile():
+    staff_member = employee()
+    if request.method == "POST":
+        f = request.form
+        try:
+            staff_member.updateContactInformation(
+                f.get("firstName", ""), f.get("lastName", ""),
+                f.get("phone", ""), f.get("email", ""))
+        except ValueError as error:
+            flash(str(error), "error")
+        else:
+            flash("Your profile was updated.", "success")
+            return redirect(url_for("portal_profile"))
+    return render_template("portal/profile.html", profile=staff_member)
+
+
 @app.route("/portal")
 @staff_required
 def dashboard():
@@ -533,15 +564,16 @@ def dashboard():
                          "'In progress'", (STORE_ID,)),
         "to_pay": count("SELECT COUNT(*) FROM orders WHERE storeID = ? AND orderStatus IN "
                         "('Ready', 'Declined')", (STORE_ID,)),
-        "low": count("SELECT COUNT(*) FROM inventory_items i JOIN inventories v ON "
-                     "v.inventoryID = i.inventoryID WHERE v.storeID = ? AND "
-                     "i.quantity < i.minimumQuantity", (STORE_ID,)),
     }
+    if current_staff()["managerID"]:
+        counts["low"] = count("SELECT COUNT(*) FROM inventory_items i JOIN inventories v ON "
+                              "v.inventoryID = i.inventoryID WHERE v.storeID = ? AND "
+                              "i.quantity < i.minimumQuantity", (STORE_ID,))
     return render_template("portal/dashboard.html", counts=counts)
 
 
 @app.post("/portal/reset")
-@staff_required
+@manager_required
 def reset():
     create_database()
     EST_TIMES.clear()
@@ -820,7 +852,7 @@ def cancel_order(orderID):
 
 
 @app.post("/portal/orders/<orderID>/approve")
-@staff_required
+@manager_required
 def approve_cancellation(orderID):
     """Wireframe 03 - Cancellation Approval: approveCancellation(orderID, managerID,
     accountPassword) (Milestone 5 method specification 02)."""
@@ -1046,7 +1078,7 @@ def stores():
 
 
 @app.route("/portal/inventory")
-@staff_required
+@manager_required
 def inventory():
     """Wireframe 1 - Inventory List: InventoryUI.viewInventory() with the search keyword
     (item ID or name) and the below-minimum filter."""
@@ -1065,7 +1097,7 @@ def inventory():
 
 
 @app.route("/portal/inventory/<int:storeID>/<int:itemID>", methods=["GET", "POST"])
-@staff_required
+@manager_required
 def inventory_update(storeID, itemID):
     """Wireframe 2 - Update Inventory Quantity: InventoryUI.updateQuantity(itemID, newQuantity)
     -> Inventory.updateInventoryRecord -> InventoryItem.validateQuantity -> InventoryDatabase."""
@@ -1096,7 +1128,7 @@ def store_name(storeID):
 
 
 @app.route("/portal/inventory/<int:storeID>/<int:itemID>/updated")
-@staff_required
+@manager_required
 def inventory_updated(storeID, itemID):
     """Wireframe 3 - Inventory Updated: the updated quantity and the confirmation."""
     screen = InventoryUI(inventory=load_inventory(storeID))
@@ -1112,7 +1144,7 @@ def inventory_updated(storeID, itemID):
 # ---- Manage Employee Accounts (UC 03, no Milestone 6 wireframe) ----------------------------------
 
 @app.route("/portal/accounts")
-@staff_required
+@manager_required
 def accounts():
     rows = query("SELECT a.*, p.firstName, p.lastName FROM employee_accounts a "
                  "JOIN employees e ON e.employeeID = a.employeeID "
@@ -1129,7 +1161,7 @@ def manager():
 
 
 @app.post("/portal/accounts/new")
-@staff_required
+@manager_required
 def account_new():
     f = request.form
     account, printed, error = run(manager().createAccount, to_int(f.get("employeeID"), -1),
@@ -1141,7 +1173,7 @@ def account_new():
 
 
 @app.post("/portal/accounts/<int:accountID>/edit")
-@staff_required
+@manager_required
 def account_edit(accountID):
     f = request.form
     ok, printed, error = run(manager().modifyAccount, accountID,
@@ -1155,7 +1187,7 @@ def account_edit(accountID):
 
 
 @app.post("/portal/accounts/<int:accountID>/delete")
-@staff_required
+@manager_required
 def account_delete(accountID):
     ok, printed, error = run(manager().deleteAccount, accountID)
     show(printed, error or (None if ok else "There is no such account."),
@@ -1166,7 +1198,7 @@ def account_delete(accountID):
 # ---- Manage Promotions (UC 05, no Milestone 6 wireframe) ------------------------------------------
 
 @app.route("/portal/promotions")
-@staff_required
+@manager_required
 def promotions():
     rows = []
     for (promotionID,) in query("SELECT promotionID FROM promotions ORDER BY promotionID"):
@@ -1177,7 +1209,7 @@ def promotions():
 
 
 @app.post("/portal/promotions/new")
-@staff_required
+@manager_required
 def promotion_new():
     f = request.form
     today = date.today()
@@ -1201,7 +1233,7 @@ def promotion_new():
 
 
 @app.post("/portal/promotions/<int:promotionID>/edit")
-@staff_required
+@manager_required
 def promotion_edit(promotionID):
     f = request.form
     promotion = Promotion.getPromotion(promotionID)
@@ -1218,7 +1250,7 @@ def promotion_edit(promotionID):
 
 
 @app.post("/portal/promotions/<int:promotionID>/share")
-@staff_required
+@manager_required
 def promotion_share(promotionID):
     promotion = Promotion.getPromotion(promotionID)
     if promotion is None:
@@ -1233,7 +1265,7 @@ def promotion_share(promotionID):
 # ---- Create Reports (UC 06, no Milestone 6 wireframe) ---------------------------------------------
 
 @app.route("/portal/reports", methods=["GET", "POST"])
-@staff_required
+@manager_required
 def reports():
     form = request.form if request.method == "POST" else {}
     result = None
@@ -1271,7 +1303,7 @@ def reports():
 
 
 @app.route("/portal/exports/<path:filename>")
-@staff_required
+@manager_required
 def download_export(filename):
     return send_from_directory(EXPORT_DIR, filename, as_attachment=True)
 
