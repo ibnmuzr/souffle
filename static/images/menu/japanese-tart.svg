@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-labelledby="title">
+  <title id="title">Japanese fruit tart</title>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f8f2e8"/>
+      <stop offset="1" stop-color="#e9ddca"/>
+    </linearGradient>
+    <linearGradient id="crust" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e1ae62"/>
+      <stop offset="1" stop-color="#a86637"/>
+    </linearGradient>
+    <radialGradient id="custard" cx="48%" cy="35%" r="75%">
+      <stop offset="0" stop-color="#fff1bd"/>
+      <stop offset="1" stop-color="#e7bc6c"/>
+    </radialGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="180%">
+      <feGaussianBlur stdDeviation="12"/>
+    </filter>
+  </defs>
+  <rect width="800" height="600" fill="url(#background)"/>
+  <ellipse cx="400" cy="450" rx="260" ry="55" fill="#806b50" opacity=".22" filter="url(#shadow)"/>
+  <ellipse cx="400" cy="423" rx="260" ry="72" fill="#d5c6ae"/>
+  <ellipse cx="400" cy="410" rx="260" ry="72" fill="#fffdf8"/>
+  <ellipse cx="400" cy="410" rx="234" ry="57" fill="#eee7da"/>
+  <path d="M218 305c0-31 364-31 364 0v70c0 32-364 32-364 0z" fill="url(#crust)"/>
+  <ellipse cx="400" cy="305" rx="182" ry="78" fill="#bd7940"/>
+  <ellipse cx="400" cy="298" rx="165" ry="65" fill="url(#custard)"/>
+  <ellipse cx="400" cy="299" rx="148" ry="52" fill="#fff0bd"/>
+  <path d="M268 308c48-35 88-38 132-7 44-31 88-28 132 7" fill="none" stroke="#e8c77d" stroke-width="8" opacity=".75"/>
+  <g stroke="#fff3d4" stroke-width="3">
+    <path d="M320 260c-13 22-18 38-15 54"/><path d="M480 260c13 22 18 38 15 54"/>
+  </g>
+  <g>
+    <path d="M359 287c-23-18-20-45 2-57 23 14 26 39 5 58z" fill="#bc3d43"/>
+    <path d="M365 234c-7-13-3-22 8-29 1 12-1 21-8 29zm2 0c7-13 16-16 27-10-10 7-19 10-27 10z" fill="#647b4f"/>
+    <path d="M410 282c-18-20-9-43 14-49 18 20 9 43-14 49z" fill="#d4524c"/>
+    <path d="M420 236c-3-13 3-21 15-25-3 12-8 20-15 25zm2 0c10-11 20-11 29-3-12 4-21 5-29 3z" fill="#718452"/>
+    <circle cx="453" cy="291" r="15" fill="#6c4050"/>
+    <circle cx="453" cy="291" r="5" fill="#8a5260"/>
+    <circle cx="332" cy="292" r="13" fill="#6c4050"/>
+    <circle cx="332" cy="292" r="4" fill="#8a5260"/>
+    <circle cx="386" cy="318" r="12" fill="#b63f43"/>
+    <circle cx="428" cy="321" r="11" fill="#6c4050"/>
+  </g>
+  <path d="M219 411c48 28 105 40 181 40" fill="none" stroke="#fff" stroke-linecap="round" stroke-width="5" opacity=".75"/>
+</svg>

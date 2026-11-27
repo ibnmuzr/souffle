@@ -11,6 +11,7 @@
   {% set page = request.endpoint or '' %}
   {% set section = 'dashboard' if page == 'dashboard'
         else 'menu' if page == 'portal_menu'
+        else 'profile' if page == 'portal_profile'
         else 'inventory' if page.startswith('inventory')
         else 'kitchen' if page == 'kitchen'
         else 'accounts' if page.startswith('account')
@@ -23,8 +24,11 @@
       <a href="{{ url_for('dashboard') }}" class="{{ 'on' if section == 'dashboard' }}">Dashboard</a>
       <a href="{{ url_for('orders') }}" class="{{ 'on' if section in ('orders', 'kitchen') }}">Orders</a>
       <a href="{{ url_for('portal_menu') }}" class="{{ 'on' if section == 'menu' }}">Menu</a>
+      {% if staff.managerID %}
       <a href="{{ url_for('inventory') }}" class="{{ 'on' if section == 'inventory' }}">Inventory</a>
+      {% endif %}
       <span class="sep"></span>
+      <a href="{{ url_for('portal_profile') }}" class="{{ 'on' if section == 'profile' }}">My Profile</a>
       <a class="boxed" href="{{ url_for('portal_logout') }}">Logout</a>
     </nav>
   </header>
@@ -35,11 +39,16 @@
       <a href="{{ url_for('orders') }}" class="{{ 'on' if section == 'orders' }}">Orders</a>
       <a href="{{ url_for('kitchen') }}" class="{{ 'on' if section == 'kitchen' }}">Kitchen</a>
       <a href="{{ url_for('portal_menu') }}" class="{{ 'on' if section == 'menu' }}">Menu</a>
+      {% if staff.managerID %}
       <a href="{{ url_for('inventory') }}" class="{{ 'on' if section == 'inventory' }}">Inventory</a>
       <div class="label second">Manager</div>
       <a href="{{ url_for('accounts') }}" class="{{ 'on' if section == 'accounts' }}">Accounts</a>
       <a href="{{ url_for('promotions') }}" class="{{ 'on' if section == 'promotions' }}">Promotions</a>
       <a href="{{ url_for('reports') }}" class="{{ 'on' if section == 'reports' }}">Reports</a>
+      {% endif %}
+      <div class="label second">Account</div>
+      <a href="{{ url_for('portal_profile') }}" class="{{ 'on' if section == 'profile' }}">My Profile</a>
+      <a href="{{ url_for('portal_logout') }}">Logout</a>
       <div class="who">{{ staff.name }}<br>{{ staff.role }} · Employee ID {{ staff.employeeID }}<br>Soufflé Eaton Centre</div>
     </aside>
     <main class="content">

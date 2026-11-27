@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-labelledby="title">
+  <title id="title">Small Japanese soufflé cheesecake</title>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f8f2e8"/>
+      <stop offset="1" stop-color="#e9ddca"/>
+    </linearGradient>
+    <linearGradient id="cake-side" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff5d9"/>
+      <stop offset="1" stop-color="#e8c98e"/>
+    </linearGradient>
+    <radialGradient id="cake-top" cx="48%" cy="35%" r="70%">
+      <stop offset="0" stop-color="#f7dda3"/>
+      <stop offset=".78" stop-color="#d89e59"/>
+      <stop offset="1" stop-color="#aa6939"/>
+    </radialGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="180%">
+      <feGaussianBlur stdDeviation="12"/>
+    </filter>
+  </defs>
+  <rect width="800" height="600" fill="url(#background)"/>
+  <ellipse cx="400" cy="450" rx="260" ry="55" fill="#806b50" opacity=".22" filter="url(#shadow)"/>
+  <ellipse cx="400" cy="423" rx="260" ry="72" fill="#d5c6ae"/>
+  <ellipse cx="400" cy="410" rx="260" ry="72" fill="#fffdf8"/>
+  <ellipse cx="400" cy="410" rx="234" ry="57" fill="#eee7da"/>
+  <g transform="translate(400 340) scale(.64) translate(-400 -340)">
+    <path d="M225 278c0-25 350-25 350 0v118c0 31-350 31-350 0z" fill="#bd8148"/>
+    <path d="M237 286c0-16 326-16 326 0v106c0 24-326 24-326 0z" fill="url(#cake-side)"/>
+    <path d="M237 315c65 15 110-11 164 2 58 14 104-17 162-1v22c-58-15-104 15-162 1-54-13-99 13-164-2z" fill="#fdf2d5" opacity=".85"/>
+    <path d="M237 354c66 13 106-11 164 1 57 12 103-15 162-1v20c-59-13-105 14-162 2-58-12-98 12-164-1z" fill="#f8e8c4" opacity=".9"/>
+    <ellipse cx="400" cy="278" rx="175" ry="64" fill="#a8673b"/>
+    <ellipse cx="400" cy="271" rx="165" ry="56" fill="url(#cake-top)"/>
+    <ellipse cx="400" cy="270" rx="145" ry="44" fill="#f1d49a"/>
+    <path d="M290 273c35-21 73-25 110-12 40 14 78 7 110-8" fill="none" stroke="#f8e8c5" stroke-linecap="round" stroke-width="9" opacity=".75"/>
+    <g fill="#c68b4f" opacity=".68">
+      <circle cx="310" cy="321" r="3"/><circle cx="362" cy="343" r="3"/>
+      <circle cx="437" cy="318" r="3"/><circle cx="493" cy="359" r="3"/>
+      <circle cx="334" cy="382" r="2.5"/><circle cx="462" cy="382" r="2.5"/>
+    </g>
+  </g>
+  <path d="M219 411c48 28 105 40 181 40" fill="none" stroke="#fff" stroke-linecap="round" stroke-width="5" opacity=".75"/>
+</svg>

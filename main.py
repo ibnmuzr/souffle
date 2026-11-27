@@ -60,7 +60,7 @@ def main():
     print("\nMenu:")
     for r in conn.execute("SELECT * FROM menu_items"):
         item = MenuItem(r["menuItemID"], r["name"], r["description"], r["category"],
-                        r["price"], bool(r["isAvailable"]))
+                        r["price"], bool(r["isAvailable"]), r["imageURL"])
         status = "available" if item.checkAvailability(item.menuItemID, 1) else "unavailable"
         print(f"  {item.name:<34}${item.price:>6.2f}  ({status})")
 

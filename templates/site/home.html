@@ -1,5 +1,5 @@
 {% extends "site/base.html" %}
-{% from "macros.html" import money %}
+{% from "macros.html" import menu_photo, money %}
 {% block title %}Home{% endblock %}
 {% block content %}
 <section class="hero site-hero">
@@ -25,16 +25,17 @@
     <div><div class="site-eyebrow"><span></span> The good stuff</div><h2>Our little slice of Japan</h2></div>
     <a class="site-text-link" href="{{ url_for('site_menu') }}">See the full menu <span aria-hidden="true">→</span></a>
   </div>
-  <div class="signature-grid">
+  <div class="menu-cards">
   {% for m in menu if m.isAvailable %}
     {% if loop.index <= 3 %}
-    <article class="signature-card">
-      <div class="signature-card-art" aria-hidden="true"><span>✳</span></div>
-      <div class="signature-card-info">
-        <div><span class="signature-category">{{ m.category }}</span><h3>{{ m.name }}</h3></div>
-        <b>{{ money(m.price) }}</b>
+    <article class="menu-card">
+      {{ menu_photo(m) }}
+      <div class="menu-card__body">
+        <div class="menu-card__meta"><span>{{ m.category }}</span></div>
+        <h2>{{ m.name }}</h2>
+        <p class="menu-card__description">{{ m.description or 'Freshly prepared with care.' }}</p>
+        <div class="menu-card__footer"><strong class="menu-card__price">{{ money(m.price) }}</strong></div>
       </div>
-      {% if m.description %}<p>{{ m.description }}</p>{% endif %}
     </article>
     {% endif %}
   {% endfor %}
