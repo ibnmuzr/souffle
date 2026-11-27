@@ -213,13 +213,11 @@ MENU_ITEM_IMAGES = {
     'Japanese Cheesecake 8" (Large)': (
         "/static/images/menu/souffle-cheesecake-large.png"),
     "Japanese Tart": (
-        "https://chefstrawlicious.one/wp-content/uploads/2025/12/4-26.webp"),
+        "/static/images/Designer (5).png"),
     "Americano": (
-        "https://res.cloudinary.com/joe-coffee/image/upload/"
-        "v1572900558/menu-items/zjslvvn4zpqsbevdenvu.jpg"),
+        "/static/images/Designer (6).png"),
     "Latte": (
-        "https://images.unsplash.com/photo-1461023058943-07fcbe16d735"
-        "?auto=format&fit=crop&w=800&q=80"),
+        "/static/images/Designer (7).png"),
 }
 
 PREVIOUS_MENU_ITEM_IMAGES = {
@@ -238,9 +236,15 @@ PREVIOUS_MENU_ITEM_IMAGES = {
     "Japanese Tart": (
         "/static/images/menu/japanese-tart.svg",
         "https://images.unsplash.com/photo-1488477181946-6428a0291777"
-        "?auto=format&fit=crop&w=800&q=80"),
+        "?auto=format&fit=crop&w=800&q=80",
+        "https://chefstrawlicious.one/wp-content/uploads/2025/12/4-26.webp"),
     "Americano": (
         "https://images.unsplash.com/photo-1509042239860-a550ce710b93"
+        "?auto=format&fit=crop&w=800&q=80",
+        "https://res.cloudinary.com/joe-coffee/image/upload/"
+        "v1572900558/menu-items/zjslvvn4zpqsbevdenvu.jpg",),
+    "Latte": (
+        "https://images.unsplash.com/photo-1461023058943-07fcbe16d735"
         "?auto=format&fit=crop&w=800&q=80",),
 }
 
