@@ -5,7 +5,7 @@ Attributes and operations follow the Milestone 5 implementation class diagram.
 from __future__ import annotations
 
 from contextlib import closing
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, time
 from typing import List, Optional
 
@@ -49,10 +49,11 @@ class Person:
 class Customer(Person):
     """A person who places, confirms and pays for an order.
 
-    Associations: Customer "uses" OrderHandler; Customer "receives" Promotion;
-    Customer Loyalty Report "analyses" Customer.
+    Associations: Customer "uses" OrderHandler; Customer "places" Order (the orders
+    list); Customer "receives" Promotion; Customer Loyalty Report "analyses" Customer.
     """
     customerID: int
+    orders: List[Order] = field(default_factory=list)   # Customer "places" Order (0..*)
 
     def confirmOrder(self, orderID: str) -> bool:
         """The customer confirms the order summary: it is submitted to the kitchen."""
@@ -93,7 +94,8 @@ class Customer(Person):
                 "SELECT * FROM orders WHERE customerID = ? ORDER BY orderDate DESC, orderID DESC",
                 (customerID,),
             ).fetchall()
-        return [order_from_row(row) for row in rows]
+        self.orders = [order_from_row(row) for row in rows]
+        return self.orders
 
 
 @dataclass

@@ -62,15 +62,13 @@ class Order:
     orderType: str
     orderTotal: float
     orderStatus: str
-    # Data-layer references (not attributes in the class diagram)
-    customerID: Optional[int] = None     # NULL for a walk-in customer
+    cancellationReason: str = ""         # why the order was cancelled (set by cancel)
+    # Associations kept as references to the related rows (class diagram guideline 5)
+    customerID: Optional[int] = None     # Customer "places" Order (NULL for a walk-in customer)
     employeeID: Optional[int] = None     # the employee who entered the order
-    storeID: Optional[int] = None        # the store where the order was placed
+    storeID: Optional[int] = None        # Order "placed at" Store
     promotionID: Optional[int] = None    # the promotion applied to the order, if any
     discountAmount: float = 0.0          # discount given by that promotion
-
-    def __post_init__(self):
-        self.cancellationReason = ""
 
     # ---- Create and Submit Order ------------------------------------------------------
 
@@ -339,9 +337,14 @@ def load_order(orderID: str) -> Order:
     with closing(get_connection()) as conn:
         row = conn.execute("SELECT * FROM orders WHERE orderID = ?",
                            (orderID.strip().upper(),)).fetchone()
-    if row is None:
-        raise ValueError(f"There is no order {orderID}.")
-    return order_from_row(row)
+        if row is None:
+            raise ValueError(f"There is no order {orderID}.")
+        order = order_from_row(row)
+        if order.orderStatus == "Cancelled":
+            cancelled = conn.execute("SELECT reason FROM cancellation_records WHERE orderID = ?",
+                                     (order.orderID,)).fetchone()
+            order.cancellationReason = cancelled["reason"] if cancelled else ""
+    return order
 
 
 def next_order_id() -> str:

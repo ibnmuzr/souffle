@@ -17,6 +17,7 @@ BTM 495 team project (Fall 2026). This is a prototype of the to-be system for So
 | 2 | Every operation of every class is implemented | Done |
 | 2 | Names and signatures match the **Milestone 5 implementation class diagram**; one main menu (`app.py`) opens every screen | Done |
 | 2 | **Web frontend** (`web_app.py`) following the **Milestone 6 HCI design**: customer website and employee portal, every wireframe screen and wireflow, calling the same class operations as the terminal screens | Done |
+| Final | Milestone 5 feedback: `OrderHandler.pendingReason`, `Order.cancellationReason`, `SalesReport.orderLines` / `unitsByItem` / `salesByDay` and `Customer.orders` are attributes of their classes; `Order.customerID` and `Order.storeID` are the order's Customer and Store references; running the same sales report again starts from zero | Done |
 
 Every operation in the Milestone 5 class diagram is in the code with the same name and parameters, and all of them are implemented.
 
@@ -249,8 +250,9 @@ Design rules used (Chapter 9, data management layer):
 - **Data-access classes**: Sales Database keeps its sales and cancellation records in `sales_records` and `cancellation_records`; Inventory Database reads and updates `inventory_items`.
 - **Derived attribute**: `/duration` of Promotion is calculated from its dates, not stored.
 - **Generalization (Milestone 5, guideline 8)**: the implementation class diagram removes the abstract classes and shows each child with the attributes and methods it inherits. In the code, those shared attributes and methods are written once in a base class (Person, Payment, Report), so each child class has exactly what the diagram shows. The base classes cannot be created on their own.
-- **Association attributes (Milestone 5, guideline 5)**: each association is kept as a reference to the related object or as its ID, which is also the foreign key in the database. For example `OrderLine.menuItem`, `Order.orderLine` (the list of lines), `Inventory.inventoryDatabase`, `Inventory.items`, `InventoryUI.inventory`, `Order.promotionID`, `Order.customerID`, `EmployeeAccount.managerID`, `Promotion.managerID`, and each report's `managerID` and `storeID`.
-- **Data-layer columns**, not attributes in the class diagram: `orders.storeID` (where the order was placed, so reports can filter by store), `orders.customerID` / `orders.employeeID` (in the diagram these links go through the OrderHandler; the order history and reports need them stored) and `orders.discountAmount` (the discount the promotion gave).
+- **Association attributes (Milestone 5, guideline 5)**: each association is kept as a reference to the related object or as its ID, which is also the foreign key in the database. For example `OrderLine.menuItem`, `Order.orderLine` (the list of lines), `Inventory.inventoryDatabase`, `Inventory.items`, `InventoryUI.inventory`, `Order.promotionID`, `Order.customerID` (Customer "places" Order), `Order.storeID` (Order "placed at" Store), `Customer.orders` (the customer's orders, filled by `viewOrderHistory`), `EmployeeAccount.managerID`, `Promotion.managerID`, and each report's `managerID` and `storeID`.
+- **Data-layer columns**, not attributes in the class diagram: `orders.employeeID` (the employee who entered the order) and `orders.discountAmount` (the discount the promotion gave).
+- **Attributes kept in other tables**: `Order.cancellationReason` is stored in `cancellation_records.reason` and read back when a cancelled order is loaded. `OrderHandler.pendingReason` is only held while a cancellation waits for a manager's approval, so it has no column.
 
 Sample menu items and prices come from Soufflé's Clover item list; people and orders in the sample data are fictional.
 

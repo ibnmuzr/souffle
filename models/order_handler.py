@@ -29,15 +29,13 @@ class OrderHandler:
     """«controller» Coordinates creating, modifying, cancelling, tracking and completing
     an order."""
     estTime: Optional[time] = None
+    pendingReason: str = ""               # cancellation reason waiting for a manager's approval
     # Associations from the class diagram: Customer and Employee "use" OrderHandler;
     # OrderHandler "handles" Order
     customer: Optional[object] = None     # Customer placing the order (None = walk-in)
     employee: Optional[object] = None     # Employee using the screen
     order: Optional[Order] = None         # the order being worked on
     storeID: int = 1                      # data layer: the store where the app runs
-
-    def __post_init__(self):
-        self.pendingReason = ""           # cancellation reason waiting for approval
 
     # ---- Create and Submit Order ------------------------------------------------------
 

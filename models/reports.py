@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import csv
 from contextlib import closing
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
 from typing import List, Optional
@@ -184,6 +184,9 @@ class SalesReport(Report):
     totalRevenue: float = 0.0
     unitSold: int = 0
     averageOrderTotal: float = 0.0
+    orderLines: list = field(default_factory=list)    # order lines of the period: (orderID, quantity)
+    unitsByItem: dict = field(default_factory=dict)   # menu item name -> units sold
+    salesByDay: dict = field(default_factory=dict)    # day -> sales total of that day
 
     REPORT_NAME = "Sales"
 
@@ -191,15 +194,13 @@ class SalesReport(Report):
         super().__post_init__()
         self.orders: List[Order] = []    # SalesReport "summarizes" Order
         self.orderTotals = {}            # orderID -> orderTotal returned by calculateTotal
-        self.orderLines = []             # order lines of the period: (orderID, quantity)
-        self.unitsByItem = {}            # menu item name -> units sold
-        self.salesByDay = {}             # day -> sales total of that day
 
     def retrieveRecords(self, startDate: date, endDate: date, storeID: int) -> bool:
         """Sequence diagram "Create Reports: Generate Sales Report"."""
         self._set_period(startDate, endDate, storeID)
         self.orders = [order_from_row(row)
                        for row in self._completed_orders(storeID, startDate, endDate)]
+        self.orderTotals = {}            # start fresh when the same report is run again
         # loop [for each order in the period]
         for order in self.orders:
             self.orderTotals[order.orderID] = order.calculateTotal(order.orderID)
