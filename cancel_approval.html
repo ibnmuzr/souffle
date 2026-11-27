@@ -1,0 +1,73 @@
+{% extends "portal/base.html" %}
+{% from "macros.html" import money, status %}
+{% block title %}Cancellation {{ view.order.orderID }}{% endblock %}
+{% block content %}
+<div class="crumb">Orders / Order {{ view.order.orderID }} / {{ 'Cancellation confirmation' if no_approval else 'Cancellation approval' }}</div>
+<h1>{{ 'Order Cancelled' if no_approval else 'Cancellation Approval' }}</h1>
+<p class="lead">{{ 'The kitchen had not started this order, so no manager approval was needed.' if no_approval else 'Review the cancellation request and approve or reject it.' }}</p>
+
+<div class="box">
+  <div class="box-head">Order Information</div>
+  <div class="box-body grid g-2">
+    <div class="kv">
+      <span class="k">Order ID:</span><span class="v">{{ view.order.orderID }}</span>
+      <span class="k">Requested by:</span><span class="v">EMP{{ '%03d' | format(staff.employeeID) }} · {{ staff.name }}</span>
+      <span class="k">Cancellation reason:</span><span class="v">{{ reason }}</span>
+    </div>
+    <div class="kv">
+      <span class="k">Order total (CAD):</span><span class="v">{{ money(view.order.orderTotal) }}</span>
+      <span class="k">Current status:</span><span class="v">{% if done %}{{ status('Cancelled') }}{% else %}<span class="status">Awaiting Manager Approval</span>{% endif %}</span>
+    </div>
+  </div>
+</div>
+
+<div class="grid g-main">
+  <div class="box">
+    <div class="box-head">Order Items <span class="muted">Prices in CAD</span></div>
+    <table>
+      <tr><th>Item</th><th class="num">Quantity</th><th class="num">Unit price</th><th class="num">Line total</th></tr>
+      {% for line in view.lines %}<tr><td>{{ line.menuItem.name }}</td><td class="num">{{ line.quantity }}</td><td class="num">{{ money(line.menuItem.price) }}</td><td class="num">{{ money(line.lineTotal) }}</td></tr>{% endfor %}
+    </table>
+  </div>
+  <div class="box"><div class="box-head">Total</div><div class="box-body">
+    <table class="totals">
+      <tr><td>Subtotal</td><td class="num">{{ money(view.subtotal) }}</td></tr>
+      {% if view.order.discountAmount %}<tr><td>Promotion</td><td class="num">−{{ money(view.order.discountAmount) }}</td></tr>{% endif %}
+      <tr class="grand"><td>Total (CAD)</td><td class="num big">{{ money(view.order.orderTotal) }}</td></tr>
+    </table>
+  </div></div>
+</div>
+
+{% if not no_approval %}
+<form method="post" action="{{ url_for('approve_cancellation', orderID=view.order.orderID) }}" class="box">
+  <input type="hidden" name="reason" value="{{ reason }}">
+  <div class="box-head">Manager Authorization</div>
+  <div class="box-body">
+    {% if problem %}<div class="alt bad" style="margin:0 0 14px">{{ problem }}</div>{% endif %}
+    <div class="row">
+      <div class="field"><label>Manager ID</label><input name="managerID" placeholder="Enter your manager ID (e.g. 1)" {{ 'disabled' if done }}></div>
+      <div class="field"><label>Authorization password</label><input type="password" name="password" placeholder="Enter your password" {{ 'disabled' if done }}></div>
+    </div>
+    <div class="actions" style="justify-content:flex-end; margin-top:14px">
+      <button class="primary" name="decision" value="approve" {{ 'disabled' if done }}>Approve Cancellation</button>
+      <button name="decision" value="reject" {{ 'disabled' if done }}>Reject Cancellation</button>
+    </div>
+  </div>
+</form>
+{% endif %}
+
+<div class="box">
+  <div class="box-head">Cancellation Confirmation</div>
+  <div class="box-body">
+    {% if done %}
+      <div class="actions">
+        <div class="okbox" style="flex:1; margin:0"><span class="ic">OK</span><div><b>Order Cancelled Successfully.</b><div class="small muted">Order {{ view.order.orderID }} has been cancelled{{ ' and the payment refunded' if refunded }}. The cancellation is recorded.</div></div></div>
+        <div style="padding:0 18px"><div class="small muted">Status</div><b>Cancelled</b></div>
+        <a class="btn" href="{{ url_for('orders') }}">Return to Orders</a>
+      </div>
+    {% else %}
+      <p class="small muted" style="margin:0">Shown here once a manager approves the cancellation.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
