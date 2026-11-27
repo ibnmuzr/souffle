@@ -44,11 +44,30 @@ The web frontend follows the **Milestone 6 HCI design** (wireframes and wireflow
 | Interface | Address | Pages |
 |---|---|---|
 | Customer website | http://127.0.0.1:5000 | Home, Menu, Cart (Order Summary), Select Payment Method, Order Confirmed, My Orders, Pay by Card (Secure Card Payment, Enter Payment Information, Payment Status, Payment Successful) |
-| Employee portal | http://127.0.0.1:5000/portal | Sign-in, Dashboard, Orders, Kitchen, Menu, Inventory; Manager: Accounts, Promotions, Reports |
+| Employee portal | http://127.0.0.1:5000/portal | Sign-in, Dashboard, Orders, Kitchen, Menu, My Profile; Manager: Inventory, Accounts, Promotions, Reports |
 
 Employee portal sign-in: `sam.t` / `changeme` (employee) or `alex.m` / `manager123` (manager). Manager approval of a cancellation: manager ID `1`, password `manager123`. The website is signed in as the customer Jordan Lee.
 
+### Employee portal roles
+
+Portal sign-in checks the active employee's `registerUserName` and `registerPassword` in
+`employees`. Manager status is derived from the matching person's presence in `managers`;
+no separate role field or role table is needed. The `employee_accounts` records are
+manager-managed employee accounts and are not the portal's sign-in credentials.
+
+Employees can browse the portal menu, manage orders and payments, view and update their
+own contact profile, and sign out. Inventory, employee account management, promotions,
+reports and data reset are manager-only. Manager-only pages and their write/download
+endpoints reject employee requests with an error and return to the portal dashboard.
+Employees also cannot approve order cancellations. Managers retain access to all portal
+functionality. The portal profile page is available at `/portal/profile`.
+
 Every button calls the operation from the class diagram, so the sequence diagrams are unchanged. For example "Submit Order" calls `OrderHandler.submitOrder`, "Confirm Payment" calls `Customer.payOrder` with a `CashPayment`, and "Save Changes" in the inventory calls `InventoryUI.updateQuantity`. What the classes print (kitchen messages, receipts, reports) is shown on the page. The terminal screens below still work and use the same `souffle.db`.
+
+Menu items are stored in `menu_items`; the optional `imageURL` column supplies their
+photos. Existing databases gain this column automatically, sample products receive
+matching food images, and items without a working image use the bundled placeholder.
+The customer and employee menus use responsive cards with consistently cropped images.
 
 | Milestone 6 user story | Screens (wireframe numbers) | Alternative wireflows covered |
 |---|---|---|
@@ -171,6 +190,7 @@ templates/site/         Customer website pages (Home, Menu, Order Summary, check
 templates/portal/       Employee portal pages (one per wireframe screen)
 templates/pay/          Card payment screens shared by the website and the portal
 static/style.css        Styles of the web frontend (black and white, as in the wireframes)
+static/images/          Menu product illustrations and local photo placeholder
 requirements.txt        Flask, needed only for the web frontend
 models/                 Problem-domain classes, one file per use-case area
   people.py             Person (base class), Customer, Employee, Manager

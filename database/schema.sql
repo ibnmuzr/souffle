@@ -82,7 +82,8 @@ CREATE TABLE menu_items (
     description TEXT,
     category    TEXT,
     price       REAL NOT NULL CHECK (price >= 0),
-    isAvailable INTEGER NOT NULL DEFAULT 1 CHECK (isAvailable IN (0, 1))
+    isAvailable INTEGER NOT NULL DEFAULT 1 CHECK (isAvailable IN (0, 1)),
+    imageURL    TEXT
 );
 
 -- Inventory "contains" InventoryItem (composition, 1 to many);

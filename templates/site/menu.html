@@ -1,5 +1,5 @@
 {% extends "site/base.html" %}
-{% from "macros.html" import money %}
+{% from "macros.html" import menu_photo, money %}
 {% block title %}Menu{% endblock %}
 {% block content %}
 <div class="crumb">Menu</div>
@@ -7,30 +7,38 @@
 <p class="lead">Choose your items and quantities. Your cart is saved as you add items.</p>
 
 <div class="grid g-main">
-  <div class="box">
-    <table>
-      <tr><th>Item</th><th class="num">Price (CAD)</th><th>Quantity</th><th>Action</th></tr>
-      {% for m in menu %}
-      <tr>
-        <td><b>{{ m.name }}</b><div class="small muted">{{ m.category }}{{ ' · not available' if not m.isAvailable }}</div></td>
-        <td class="num">{{ money(m.price) }}</td>
-        <td>
-          <span class="stepper">
-            <button type="button" onclick="step(this,-1)">−</button><input name="quantity" value="1" inputmode="numeric" form="add-{{ m.menuItemID }}"><button type="button" onclick="step(this,1)">+</button>
-          </span>
-        </td>
-        <td>
-          <form id="add-{{ m.menuItemID }}" method="post" action="{{ url_for('cart_add') }}" class="inline">
-            <input type="hidden" name="menuItemID" value="{{ m.menuItemID }}">
-            <button class="sm" {{ 'disabled' if not m.isAvailable }}>Add to Cart</button>
-          </form>
-        </td>
-      </tr>
-      {% endfor %}
-    </table>
-  </div>
+  <section class="menu-cards" aria-label="Soufflé menu">
+    {% for m in menu %}
+    <article class="menu-card">
+      {{ menu_photo(m) }}
+      <div class="menu-card__body">
+        <div class="menu-card__meta">
+          <span>{{ m.category }}</span>
+          {% if not m.isAvailable %}<span class="status bad">Not available</span>{% endif %}
+        </div>
+        <h2>{{ m.name }}</h2>
+        <p class="menu-card__description">{{ m.description or 'Freshly prepared with care.' }}</p>
+        <div class="menu-card__footer">
+          <strong class="menu-card__price">{{ money(m.price) }}</strong>
+          <div class="menu-card__actions">
+            <span class="stepper">
+              <button type="button" aria-label="Decrease {{ m.name }} quantity" onclick="step(this,-1)">−</button>
+              <input name="quantity" value="1" inputmode="numeric" aria-label="{{ m.name }} quantity"
+                     form="add-{{ m.menuItemID }}">
+              <button type="button" aria-label="Increase {{ m.name }} quantity" onclick="step(this,1)">+</button>
+            </span>
+            <form id="add-{{ m.menuItemID }}" method="post" action="{{ url_for('cart_add') }}">
+              <input type="hidden" name="menuItemID" value="{{ m.menuItemID }}">
+              <button class="sm" {{ 'disabled' if not m.isAvailable }}>Add to Cart</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </article>
+    {% endfor %}
+  </section>
 
-  <div class="box">
+  <aside class="box">
     <div class="box-head">Your cart {% if cart %}<span class="muted">Order ID: {{ cart.order.orderID }}</span>{% endif %}</div>
     <div class="box-body">
       {% if cart and cart.lines %}
@@ -52,7 +60,7 @@
         <p class="empty" style="padding:14px 0">No items added yet.<br><span class="small">Choose a quantity, then select “Add to Cart”.</span></p>
       {% endif %}
     </div>
-  </div>
+  </aside>
 </div>
 
 <script>

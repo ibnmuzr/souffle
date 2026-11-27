@@ -1,0 +1,27 @@
+{% extends "portal/base.html" %}
+{% block title %}My Profile{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="crumb">Account / My profile</div>
+    <h1>My Profile</h1>
+    <p class="lead" style="margin:0">Update your own contact information.</p>
+  </div>
+  <span class="role">{{ staff.role }}</span>
+</div>
+
+<form method="post" class="box"><div class="box-body">
+  <div class="row">
+    <div class="field"><label>First name</label><input name="firstName" value="{{ profile.firstName }}" required></div>
+    <div class="field"><label>Last name</label><input name="lastName" value="{{ profile.lastName }}" required></div>
+  </div>
+  <div class="row">
+    <div class="field"><label>Phone</label><input name="phone" value="{{ profile.phone or '' }}"></div>
+    <div class="field"><label>Email</label><input type="email" name="email" value="{{ profile.email or '' }}"></div>
+  </div>
+  <div class="actions">
+    <button class="primary">Save Profile</button>
+    <a class="btn" href="{{ url_for('dashboard') }}">Cancel</a>
+  </div>
+</div></form>
+{% endblock %}
