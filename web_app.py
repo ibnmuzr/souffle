@@ -853,7 +853,7 @@ def cancel_order(orderID):
 
 
 @app.post("/portal/orders/<orderID>/approve")
-@manager_required
+@staff_required
 def approve_cancellation(orderID):
     """Wireframe 03 - Cancellation Approval: approveCancellation(orderID, managerID,
     accountPassword) (Milestone 5 method specification 02)."""
