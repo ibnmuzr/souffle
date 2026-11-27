@@ -7,15 +7,19 @@
   <title>{% block title %}Soufflé{% endblock %} · Soufflé</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body>
+<body class="customer-site">
   {% set page = request.endpoint or '' %}
-  <header class="topbar">
-    <a class="logo" href="{{ url_for('home') }}">SOUFFLÉ</a>
-    <nav class="topnav">
+  <div class="site-announcement">Hand-whipped, cloud-soft Japanese cheesecake · Baked fresh in Montréal</div>
+  <header class="topbar site-topbar">
+    <a class="logo site-logo" href="{{ url_for('home') }}" aria-label="Soufflé home">
+      <span class="logo-mark" aria-hidden="true">S</span>
+      <span>SOUFFLÉ<small>JAPANESE CHEESECAKE</small></span>
+    </a>
+    <nav class="topnav site-nav" aria-label="Main navigation">
       <a href="{{ url_for('home') }}" class="{{ 'on' if page == 'home' }}">Home</a>
       <a href="{{ url_for('site_menu') }}" class="{{ 'on' if page == 'site_menu' }}">Menu</a>
       <a href="{{ url_for('my_orders') }}" class="{{ 'on' if page in ('my_orders', 'order_confirmed', 'site_pay', 'site_secure', 'site_card', 'site_receipt') }}">My Orders</a>
-      <a href="{{ url_for('cart') }}" class="{{ 'on' if page in ('cart', 'checkout') }}"><b>Cart</b>{% if cart_count %}<span class="cart-count">{{ cart_count }}</span>{% endif %}</a>
+      <a class="site-cart {{ 'on' if page in ('cart', 'checkout') }}" href="{{ url_for('cart') }}">Cart{% if cart_count %}<span class="cart-count">{{ cart_count }}</span>{% endif %}</a>
     </nav>
   </header>
   <main class="site-main">
