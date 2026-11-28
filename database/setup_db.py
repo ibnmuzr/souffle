@@ -60,10 +60,13 @@ INSERT INTO employee_accounts VALUES
 
 -- promotionID, managerID, title, discountType, discountValue, creationDate, startDate,
 -- endDate, sharingChannel, lifeCycleState
-INSERT INTO promotions VALUES
-  (1, 1, 'Fall Loyalty Week',   'percentage', 10, '2026-10-15', '2026-10-20', '2026-10-31', 'email',        'expired'),
-  (2, 1, 'Holiday Bundle',      'fixed',       5, '2026-11-02', '2026-12-01', '2026-12-24', NULL,           'draft'),
-  (3, 1, 'Fall Latte Days',     'percentage', 15, '2026-10-30', '2026-11-01', '2026-12-31', 'social media', 'shared');
+INSERT INTO promotions
+  (promotionID, managerID, title, discountType, discountValue, creationDate, startDate,
+   endDate, sharingChannel, lifeCycleState, promotionCode)
+VALUES
+  (1, 1, 'Fall Loyalty Week',   'percentage', 10, '2026-10-15', '2026-10-20', '2026-10-31', 'email',        'expired', ''),
+  (2, 1, 'Holiday Bundle',      'fixed',       5, '2026-11-02', '2026-12-01', '2026-12-24', NULL,           'draft', ''),
+  (3, 1, 'Fall Latte Days',     'percentage', 15, '2026-10-30', '2026-11-01', '2026-12-31', 'social media', 'shared', 'FALL15');
 INSERT INTO customer_promotions VALUES (1, 1), (2, 3), (4, 3);
 
 -- orderStatus uses the states of the order state machine (Milestone 4).
@@ -135,7 +138,9 @@ INSERT INTO receipts VALUES
 INSERT INTO reports VALUES
   (1, 1, 1, '2026-10-01', '2026-10-22', '2026-10-22', 'PDF'),
   (2, 1, 1, '2026-10-01', '2026-10-22', '2026-10-22', 'PDF');
-INSERT INTO sales_reports       VALUES (1, 19.48, 2, 19.48);
+INSERT INTO sales_reports
+  (reportID, totalRevenue, unitSold, averageOrderTotal, totalDiscounts)
+  VALUES (1, 19.48, 2, 19.48, 0);
 INSERT INTO sales_report_orders VALUES (1, 'ORD-0001');
 INSERT INTO inventory_reports      VALUES (2, 2);
 INSERT INTO inventory_report_items VALUES (2, 1), (2, 4);
@@ -159,7 +164,7 @@ def create_database(path=DB_PATH, seed=True):
 
 
 def migrate_database(path=DB_PATH):
-    """Add menu image URLs to an existing database without replacing its data."""
+    """Add promotion codes and menu image URLs without replacing existing data."""
     path = Path(path)
     if not path.exists():
         return
@@ -168,7 +173,28 @@ def migrate_database(path=DB_PATH):
     try:
         tables = {row[0] for row in conn.execute(
             "SELECT name FROM sqlite_master WHERE type = 'table'")}
+        if "promotions" in tables:
+            columns = {row[1] for row in conn.execute("PRAGMA table_info(promotions)")}
+            if "promotionCode" not in columns:
+                conn.execute("ALTER TABLE promotions ADD COLUMN promotionCode TEXT NOT NULL "
+                             "DEFAULT ''")
+            conn.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS idx_promotions_code "
+                "ON promotions(UPPER(TRIM(promotionCode))) "
+                "WHERE TRIM(promotionCode) != ''")
+        if "sales_reports" in tables:
+            columns = {row[1] for row in conn.execute("PRAGMA table_info(sales_reports)")}
+            if "totalDiscounts" not in columns:
+                conn.execute("ALTER TABLE sales_reports ADD COLUMN totalDiscounts REAL NOT NULL "
+                             "DEFAULT 0")
+                if {"sales_report_orders", "orders"} <= tables:
+                    conn.execute(
+                        "UPDATE sales_reports SET totalDiscounts = COALESCE(("
+                        "SELECT SUM(o.discountAmount) FROM sales_report_orders sro "
+                        "JOIN orders o ON o.orderID = sro.orderID "
+                        "WHERE sro.reportID = sales_reports.reportID), 0)")
         if "menu_items" not in tables:
+            conn.commit()
             return
         columns = {row[1] for row in conn.execute("PRAGMA table_info(menu_items)")}
         if "imageURL" not in columns:

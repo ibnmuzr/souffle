@@ -184,6 +184,7 @@ class SalesReport(Report):
     totalRevenue: float = 0.0
     unitSold: int = 0
     averageOrderTotal: float = 0.0
+    totalDiscounts: float = 0.0
 
     REPORT_NAME = "Sales"
 
@@ -200,6 +201,7 @@ class SalesReport(Report):
         self._set_period(startDate, endDate, storeID)
         self.orders = [order_from_row(row)
                        for row in self._completed_orders(storeID, startDate, endDate)]
+        self.totalDiscounts = round(sum(order.discountAmount for order in self.orders), 2)
         # loop [for each order in the period]
         for order in self.orders:
             self.orderTotals[order.orderID] = order.calculateTotal(order.orderID)
@@ -245,6 +247,7 @@ class SalesReport(Report):
     def _summary(self) -> list:
         return [("Orders", len(self.orders)),
                 ("Total revenue", self.totalRevenue),
+                ("Total discounts", self.totalDiscounts),
                 ("Units sold", self.unitSold),
                 ("Average order total", self.averageOrderTotal)]
 
@@ -252,9 +255,9 @@ class SalesReport(Report):
         units = {}
         for orderID, quantity in self.orderLines:
             units[orderID] = units.get(orderID, 0) + quantity
-        header = ["Order", "Date", "Type", "Units", "Order total"]
+        header = ["Order", "Date", "Type", "Units", "Promotion discount", "Order total"]
         rows = [[o.orderID, o.orderDate.isoformat(), o.orderType,
-                 units.get(o.orderID, 0), self.orderTotals[o.orderID]]
+                 units.get(o.orderID, 0), o.discountAmount, self.orderTotals[o.orderID]]
                 for o in self.orders]
         return header, rows
 
@@ -265,8 +268,12 @@ class SalesReport(Report):
                  [[day.isoformat(), total] for day, total in sorted(self.salesByDay.items())])]
 
     def _save_details(self, conn) -> None:
-        conn.execute("INSERT INTO sales_reports VALUES (?, ?, ?, ?)",
-                     (self.reportID, self.totalRevenue, self.unitSold, self.averageOrderTotal))
+        conn.execute(
+            "INSERT INTO sales_reports "
+            "(reportID, totalRevenue, unitSold, averageOrderTotal, totalDiscounts) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (self.reportID, self.totalRevenue, self.unitSold, self.averageOrderTotal,
+             self.totalDiscounts))
         conn.executemany("INSERT INTO sales_report_orders VALUES (?, ?)",
                          [(self.reportID, o.orderID) for o in self.orders])
 

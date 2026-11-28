@@ -1,5 +1,5 @@
 {% extends "site/base.html" %}
-{% from "macros.html" import money, totals %}
+{% from "macros.html" import money %}
 {% block title %}Order Summary{% endblock %}
 {% block content %}
 <div class="crumb">Interaction 1 of 6 · Order summary · Output</div>
@@ -36,7 +36,23 @@
 
   <div class="panel" style="border-color:#222">
     <h3>Order total</h3>
-    {{ totals(view) }}
+    <form method="post" action="{{ url_for('apply_customer_promotion') }}" style="margin:12px 0">
+      <label for="promotionCode">Promotion code</label>
+      <div class="actions">
+        <input id="promotionCode" name="promotionCode" value="{{ view.promotion.promotionCode if view.promotion else '' }}" placeholder="Enter code" autocomplete="off">
+        <button class="sm">Apply</button>
+      </div>
+    </form>
+    {% if view.promotion and view.order.discountAmount %}
+      <p class="small muted">Code {{ view.promotion.promotionCode }} applied.</p>
+    {% endif %}
+    <table class="totals">
+      <tr><td>Original subtotal</td><td class="num">{{ money(view.subtotal) }}</td></tr>
+      {% if view.order.discountAmount %}
+        <tr><td>Discount{% if view.promotion %}: {{ view.promotion.title }}{% endif %}</td><td class="num">−{{ money(view.order.discountAmount) }}</td></tr>
+      {% endif %}
+      <tr class="grand"><td>Updated total</td><td class="num big">{{ money(view.order.orderTotal) }}</td></tr>
+    </table>
     <a class="btn primary block" style="margin-top:14px" href="{{ url_for('checkout') }}">Proceed to Payment</a>
     <p class="hint">Next: choose how to pay.</p>
   </div>

@@ -112,8 +112,11 @@ CREATE TABLE promotions (
     endDate        TEXT NOT NULL,
     sharingChannel TEXT,
     lifeCycleState TEXT NOT NULL CHECK (lifeCycleState IN ('draft', 'shared', 'expired')),
+    promotionCode  TEXT NOT NULL DEFAULT '',
     CHECK (endDate >= startDate)
 );
+CREATE UNIQUE INDEX idx_promotions_code ON promotions(UPPER(TRIM(promotionCode)))
+    WHERE TRIM(promotionCode) != '';
 
 -- Customer "receives" Promotion (many to many)
 CREATE TABLE customer_promotions (
@@ -222,7 +225,8 @@ CREATE TABLE sales_reports (
     reportID          INTEGER PRIMARY KEY REFERENCES reports(reportID) ON DELETE CASCADE,
     totalRevenue      REAL NOT NULL DEFAULT 0,
     unitSold          INTEGER NOT NULL DEFAULT 0,
-    averageOrderTotal REAL NOT NULL DEFAULT 0
+    averageOrderTotal REAL NOT NULL DEFAULT 0,
+    totalDiscounts    REAL NOT NULL DEFAULT 0
 );
 
 CREATE TABLE inventory_reports (

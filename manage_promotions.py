@@ -9,7 +9,7 @@ from contextlib import closing
 from datetime import date
 
 from database.connection import DB_PATH, get_connection
-from database.setup_db import create_database
+from database.setup_db import create_database, migrate_database
 from models import Promotion
 from models.people import load_manager
 from models.promotions import SHARING_CHANNELS, next_promotion_id
@@ -41,7 +41,8 @@ def list_promotions():
         p = Promotion.getPromotion(promotionID)
         off = f"{p.discountValue}%" if p.discountType == "percentage" else f"${p.discountValue}"
         print(f"  {p.promotionID}  {p.title:<20}{off:>5} off  {p.startDate} to {p.endDate}  "
-              f"{p.lifeCycleState:<8} valid now: {'yes' if p.isValid(promotionID) else 'no ':<4}"
+              f"{p.lifeCycleState:<8} code: {p.promotionCode or '-':<12}"
+              f"valid now: {'yes' if p.isValid(promotionID) else 'no ':<4}"
               f"used by {p.trackEngagement(promotionID)} order(s)")
 
 
@@ -52,7 +53,8 @@ def create(manager):
         next_promotion_id(), ask("Title"),
         ask("Discount type (percentage / fixed)", "percentage"),
         ask_value("Discount value (percent or dollars)"),
-        ask_date("Start date", today.isoformat()), ask_date("End date", today.isoformat()))
+        ask_date("Start date", today.isoformat()), ask_date("End date", today.isoformat()),
+        ask("Promotion code (optional)").upper())
     if ask("Share it now (s) or save as a draft (d)", "d").lower() == "s":
         print("Sending:")
         promotion.sharePromotion(promotion.promotionID,
@@ -69,7 +71,12 @@ def edit_or_share():
     if promotion is None:
         print("  There is no such promotion.")
         return
-    if ask("Edit the draft (e) or share it (s)", "e").lower() == "s":
+    action = ask("Edit the draft (e), share it (s), or set its code (c)", "e").lower()
+    if action == "c":
+        promotion.setPromotionCode(promotionID, ask("Promotion code (blank to clear)"))
+        print(f"  Promotion {promotionID} code updated.")
+        return
+    if action == "s":
         print("Sending:")
         promotion.sharePromotion(promotionID, ask(f"Channel ({' / '.join(SHARING_CHANNELS)})", "email"))
         print(f"  Promotion {promotionID} shared.")
@@ -77,13 +84,15 @@ def edit_or_share():
     title = ask("New title (Enter to keep)")
     value = ask("New discount value (Enter to keep)")
     promotion.editDraft(promotionID, title=title or None,
-                        discountValue=int(value) if value.isdigit() else None)
+                        discountValue=int(value) if value.isdigit() else None,
+                        promotionCode=ask("Promotion code (Enter to keep)") or None)
     print(f"  Draft {promotionID} saved.")
 
 
 def main():
     if not DB_PATH.exists():
         create_database()
+    migrate_database()
     manager = load_manager(1)
     print("=== Soufflé: Manage Promotions ===")
     print(f"Logged in as manager {manager.getFullName()}")

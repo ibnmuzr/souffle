@@ -340,6 +340,39 @@ def cart():
     return render_template("site/order_summary.html", view=order_view(order) if order else None)
 
 
+@app.post("/cart/promotion")
+def apply_customer_promotion():
+    """Validate and apply a shared, currently active customer-entered promotion code."""
+    order = cart_order()
+    if order is None or not order.getOrderDetails():
+        flash("Your cart is empty. Add items before applying a promotion code.", "error")
+        return redirect(url_for("cart"))
+    code = request.form.get("promotionCode", "").strip()
+    if not code:
+        flash("Enter a promotion code to apply.", "error")
+        return redirect(url_for("cart"))
+    promotion = Promotion.getPromotionByCode(code)
+    if promotion is None:
+        flash("That promotion code was not recognized.", "error")
+        return redirect(url_for("cart"))
+    if not promotion.isValid(promotion.promotionID):
+        flash("That promotion code is not active. It may have expired or is not valid yet.",
+              "error")
+        return redirect(url_for("cart"))
+
+    handler = OrderHandler(customer=load_customer(CUSTOMER_ID), storeID=STORE_ID)
+    handler.selectOrder(order.orderID)
+    discount, printed, error = run(handler.applyPromotion, promotion.promotionID)
+    if error:
+        show(printed, error)
+    elif discount <= 0:
+        flash("That promotion code does not apply to this order.", "error")
+    else:
+        flash(f"Promotion code {promotion.promotionCode} applied: ${discount:.2f} off.",
+              "success")
+    return redirect(url_for("cart"))
+
+
 @app.route("/checkout", methods=["GET", "POST"])
 def checkout():
     """Choose payment, process online card payments, and send approved orders to the kitchen."""
@@ -1278,7 +1311,8 @@ def promotion_new():
                           managerID=manager().managerID)
     _, printed, error = run(promotion.createPromotion, next_promotion_id(), f.get("title", ""),
                             f.get("discountType", ""), to_int(f.get("discountValue"), -1),
-                            to_date(f.get("startDate"), today), to_date(f.get("endDate"), today))
+                            to_date(f.get("startDate"), today), to_date(f.get("endDate"), today),
+                            f.get("promotionCode", ""))
     if not error:
         if f.get("action") == "share":
             _, printed, error = run(promotion.sharePromotion, promotion.promotionID,
@@ -1305,8 +1339,22 @@ def promotion_edit(promotionID):
                             discountValue=to_int(f.get("discountValue")),
                             discountType=f.get("discountType") or None,
                             startDate=to_date(f.get("startDate")),
-                            endDate=to_date(f.get("endDate")))
+                            endDate=to_date(f.get("endDate")),
+                            promotionCode=f.get("promotionCode") or None)
     show(printed, error, f"Draft {promotionID} saved.")
+    return redirect(url_for("promotions"))
+
+
+@app.post("/portal/promotions/<int:promotionID>/code")
+@manager_required
+def promotion_code(promotionID):
+    promotion = Promotion.getPromotion(promotionID)
+    if promotion is None:
+        show("", "There is no such promotion.")
+        return redirect(url_for("promotions"))
+    _, printed, error = run(promotion.setPromotionCode, promotionID,
+                            request.form.get("promotionCode", ""))
+    show(printed, error, f"Promotion {promotionID} code updated.")
     return redirect(url_for("promotions"))
 
 

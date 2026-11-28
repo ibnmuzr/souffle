@@ -112,9 +112,11 @@ def main():
     sales = SalesReport(r["reportID"], d(r["startDate"]), d(r["endDate"]), d(r["createdDate"]),
                         r["format"], managerID=r["managerID"], storeID=r["storeID"],
                         totalRevenue=r["totalRevenue"], unitSold=r["unitSold"],
-                        averageOrderTotal=r["averageOrderTotal"])
+                        averageOrderTotal=r["averageOrderTotal"],
+                        totalDiscounts=r["totalDiscounts"])
     print(f"\nSaved sales report {sales.startDate} to {sales.endDate}: revenue "
-          f"${sales.totalRevenue:.2f}, {sales.unitSold} units, average order "
+          f"${sales.totalRevenue:.2f}, discounts ${sales.totalDiscounts:.2f}, "
+          f"{sales.unitSold} units, average order "
           f"${sales.averageOrderTotal:.2f}")
 
     r = conn.execute(

@@ -37,6 +37,7 @@ class Promotion:
     sharingChannel: str  # email, SMS, social media or website; empty while a draft
     lifeCycleState: str  # "in process", "draft", "shared" or "expired"
     managerID: Optional[int] = None   # the manager who created it
+    promotionCode: str = ""
 
     @property
     def duration(self) -> int:
@@ -44,12 +45,15 @@ class Promotion:
         return (self.endDate - self.startDate).days
 
     def createPromotion(self, promotionID: int, title: str, discountType: str,
-                        discountValue: int, startDate: date, endDate: date) -> Promotion:
+                        discountValue: int, startDate: date, endDate: date,
+                        promotionCode: str = "") -> Promotion:
         """Fill in a new promotion ("in process"). It is saved by saveDraft or sharePromotion."""
         _check_details(title, discountType, discountValue, startDate, endDate)
+        code = _validated_code(promotionCode)
         self.promotionID, self.title = promotionID, title.strip()
         self.discountType, self.discountValue = discountType, discountValue
         self.startDate, self.endDate = startDate, endDate
+        self.promotionCode = code
         self.creationDate, self.sharingChannel, self.lifeCycleState = date.today(), "", "in process"
         return self
 
@@ -68,7 +72,7 @@ class Promotion:
             conn.commit()
         for customer in customers:                      # Customer "receives" Promotion
             customer.sharePromotion(self.title, self.discountType, self.discountValue,
-                                    self.startDate, self.endDate)
+                                    self.startDate, self.endDate, self.promotionCode)
 
     def isValid(self, promotionID: int) -> bool:
         """True when the promotion has been shared and today is within its dates."""
@@ -82,6 +86,12 @@ class Promotion:
             return conn.execute("SELECT COUNT(*) FROM orders WHERE promotionID = ?",
                                 (promotionID,)).fetchone()[0]
 
+    def setPromotionCode(self, promotionID: int, promotionCode: str) -> None:
+        """Set or clear a unique customer-facing code without changing lifecycle state."""
+        self._check_id(promotionID)
+        self.promotionCode = _validated_code(promotionCode, promotionID)
+        self._save()
+
     def saveDraft(self, promotionID: int) -> None:
         """Save the promotion as a draft (not shared, so not valid yet)."""
         self._check_id(promotionID)
@@ -92,7 +102,8 @@ class Promotion:
 
     def editDraft(self, promotionID: int, title: Optional[str] = None,
                   discountValue: Optional[int] = None, discountType: Optional[str] = None,
-                  startDate: Optional[date] = None, endDate: Optional[date] = None) -> None:
+                  startDate: Optional[date] = None, endDate: Optional[date] = None,
+                  promotionCode: Optional[str] = None) -> None:
         """Change a draft and save it (only drafts can be edited)."""
         self._check_id(promotionID)
         if self.lifeCycleState != "draft":
@@ -101,7 +112,10 @@ class Promotion:
                    self.discountValue if discountValue is None else discountValue,
                    startDate or self.startDate, endDate or self.endDate)
         _check_details(*changed)
+        code = self.promotionCode if promotionCode is None else \
+            _validated_code(promotionCode, promotionID)
         self.title, self.discountType, self.discountValue, self.startDate, self.endDate = changed
+        self.promotionCode = code
         self._save()
 
     @classmethod
@@ -110,6 +124,17 @@ class Promotion:
         with closing(get_connection()) as conn:
             r = conn.execute("SELECT * FROM promotions WHERE promotionID = ?",
                              (promotionID,)).fetchone()
+        return None if r is None else promotion_from_row(r)
+
+    @classmethod
+    def getPromotionByCode(cls, promotionCode: str) -> Optional[Promotion]:
+        """Find a promotion by its trimmed, case-insensitive customer-facing code."""
+        if not promotionCode or not promotionCode.strip():
+            return None
+        with closing(get_connection()) as conn:
+            r = conn.execute(
+                "SELECT * FROM promotions WHERE UPPER(TRIM(promotionCode)) = "
+                "UPPER(TRIM(?))", (promotionCode,)).fetchone()
         return None if r is None else promotion_from_row(r)
 
     def getDiscountType(self, promotionID: int) -> str:
@@ -126,11 +151,21 @@ class Promotion:
         if self.managerID is None:
             raise ValueError("A promotion needs the manager who creates it.")
         with closing(get_connection()) as conn:
-            conn.execute("INSERT OR REPLACE INTO promotions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                         (self.promotionID, self.managerID, self.title, self.discountType,
-                          self.discountValue, self.creationDate.isoformat(),
-                          self.startDate.isoformat(), self.endDate.isoformat(),
-                          self.sharingChannel or None, self.lifeCycleState))
+            conn.execute(
+                "INSERT INTO promotions "
+                "(promotionID, managerID, title, discountType, discountValue, creationDate, "
+                "startDate, endDate, sharingChannel, lifeCycleState, promotionCode) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                "ON CONFLICT(promotionID) DO UPDATE SET "
+                "managerID = excluded.managerID, title = excluded.title, "
+                "discountType = excluded.discountType, discountValue = excluded.discountValue, "
+                "creationDate = excluded.creationDate, startDate = excluded.startDate, "
+                "endDate = excluded.endDate, sharingChannel = excluded.sharingChannel, "
+                "lifeCycleState = excluded.lifeCycleState, promotionCode = excluded.promotionCode",
+                (self.promotionID, self.managerID, self.title, self.discountType,
+                 self.discountValue, self.creationDate.isoformat(), self.startDate.isoformat(),
+                 self.endDate.isoformat(), self.sharingChannel or None, self.lifeCycleState,
+                 self.promotionCode))
             conn.commit()
 
     def _check_id(self, promotionID: int) -> None:
@@ -143,7 +178,22 @@ def promotion_from_row(r) -> Promotion:
     return Promotion(r["promotionID"], r["title"], r["discountType"], r["discountValue"],
                      date.fromisoformat(r["creationDate"]), date.fromisoformat(r["startDate"]),
                      date.fromisoformat(r["endDate"]), r["sharingChannel"] or "",
-                     r["lifeCycleState"], managerID=r["managerID"])
+                     r["lifeCycleState"], managerID=r["managerID"],
+                     promotionCode=r["promotionCode"] if "promotionCode" in r.keys() else "")
+
+
+def _validated_code(promotionCode: Optional[str], excludeID: Optional[int] = None) -> str:
+    """Normalize a code and reject duplicates, ignoring case and surrounding spaces."""
+    code = (promotionCode or "").strip().upper()
+    if not code:
+        return ""
+    with closing(get_connection()) as conn:
+        existing = conn.execute(
+            "SELECT promotionID FROM promotions WHERE UPPER(TRIM(promotionCode)) = ?",
+            (code,)).fetchone()
+    if existing is not None and existing["promotionID"] != excludeID:
+        raise ValueError(f"The promotion code {code} is already in use.")
+    return code
 
 
 def next_promotion_id() -> int:

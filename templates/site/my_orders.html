@@ -14,7 +14,7 @@
       <td><b>{{ v.order.orderID }}</b></td>
       <td>{{ v.order.orderDate }}</td>
       <td class="small">{% for l in v.lines %}{{ l.quantity }} × {{ l.menuItem.name }}{{ ', ' if not loop.last }}{% endfor %}</td>
-      <td class="num">{{ money(v.order.orderTotal) }}</td>
+      <td class="num">{{ money(v.order.orderTotal) }}{% if v.order.discountAmount %}<div class="small muted">Promotion{% if v.promotion %}: {{ v.promotion.title }}{% if v.promotion.promotionCode %} ({{ v.promotion.promotionCode }}){% endif %}{% endif %} −{{ money(v.order.discountAmount) }}</div>{% endif %}</td>
       <td>{{ status(v.order.orderStatus) }}</td>
       <td class="small">{{ row.payment }}</td>
       <td class="small">{{ v.pickup or '—' }}</td>

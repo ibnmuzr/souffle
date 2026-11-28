@@ -77,10 +77,11 @@ class Customer(Person):
         return True
 
     def sharePromotion(self, title: str, discountType: str, discountValue: int,
-                       startDate: date, endDate: date) -> None:
+                       startDate: date, endDate: date, promotionCode: str = "") -> None:
         """The customer receives a shared promotion."""
         off = f"{discountValue}% off" if discountType == "percentage" else f"${discountValue} off"
-        print(f"  [to {self.getFullName()}] {title}: {off}, {startDate} to {endDate}")
+        code = f", code {promotionCode}" if promotionCode else ""
+        print(f"  [to {self.getFullName()}] {title}: {off}{code}, {startDate} to {endDate}")
 
     def viewOrderHistory(self, customerID: int) -> List[Order]:
         """Return the customer's orders, newest first.
