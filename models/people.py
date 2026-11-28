@@ -59,14 +59,14 @@ class Customer(Person):
         from .order_handler import OrderHandler
         return OrderHandler(customer=self).submitOrder(orderID)
 
-    def payOrder(self, orderID: str, paymentInfo) -> bool:
+    def payOrder(self, orderID: str, paymentInfo, beforeKitchen: bool = False) -> bool:
         """Sequence diagrams "Pay by Card" / "Pay by Cash": total := calculateTotal(orderID),
         then confirmOrder(orderID) with the card or cash payment. True if approved."""
         order = load_order(orderID)
         if order.customerID != self.customerID:
             raise ValueError(f"Order {orderID} is not {self.getFullName()}'s order.")
         order.calculateTotal(orderID)
-        return order.confirmOrder(orderID, paymentInfo)
+        return order.confirmOrder(orderID, paymentInfo, beforeKitchen=beforeKitchen)
 
     def updateProfile(self, customerID: int, updatedInfo: Customer) -> bool:
         """Copy the new contact information into the customer's profile."""

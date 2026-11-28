@@ -8,8 +8,14 @@
   <div class="idbar" style="margin-top:14px"><span>Order ID: {{ view.order.orderID }}</span><span>Amount due: {{ money(view.order.orderTotal) }} CAD</span></div>
 
   <div class="grid g-main">
-    <form method="post" class="box"><div class="box-body">
+    <form method="post" action="{{ action or request.path }}" class="box"><div class="box-body">
+      {% if layout == 'site' and request.endpoint == 'checkout' %}
+        <input type="hidden" name="checkout_card" value="1">
+      {% endif %}
       <p class="small muted">* Required fields</p>
+      {% if payment_error %}
+        <div class="alt bad" style="margin:0 0 14px">{{ payment_error }}</div>
+      {% endif %}
       {% if problems %}
         <div class="alt bad" style="margin:0 0 14px">{% for p in problems %}{{ p }}<br>{% endfor %}</div>
       {% endif %}
@@ -23,7 +29,7 @@
       <div class="field"><label>Cardholder Name *</label><input name="cardholder" placeholder="Name as shown on card" value="{{ form.get('cardholder', '') }}"></div>
       <div class="field"><label>Card Number *</label><input name="cardNumber" placeholder="XXXX XXXX XXXX XXXX" inputmode="numeric" autocomplete="off" value="{{ form.get('cardNumber', '') }}"></div>
       <div class="row" style="margin-bottom:14px">
-        <div class="field"><label>Expiration Date (MM/YY) *</label><input name="expiry" placeholder="MM/YY" value="{{ form.get('expiry', '') }}"></div>
+        <div class="field"><label>Expiry Date (MM/YY) *</label><input name="expiry" placeholder="MM/YY" value="{{ form.get('expiry', '') }}"></div>
         <div class="field"><label>CVV *</label><input name="cvv" placeholder="XXX" inputmode="numeric" autocomplete="off"></div>
       </div>
       <p class="small muted">Your payment is processed securely.</p>

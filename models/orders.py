@@ -262,13 +262,14 @@ class Order:
 
     # ---- Process Payments -------------------------------------------------------------
 
-    def confirmOrder(self, orderID: str, payment=None) -> bool:
+    def confirmOrder(self, orderID: str, payment=None, beforeKitchen: bool = False) -> bool:
         """Sequence diagrams "Pay by Card" and "Pay by Cash": create(total), then
         processPayment(paymentID). Approved: recordSale(orderID) and the order is "Paid".
         Declined: the order is "Declined" and can be paid again."""
         self._check_id(orderID)
         status = self.getStatus(orderID)
-        if status not in ("Ready", "Declined"):
+        payable_states = ("In process", "Entered") if beforeKitchen else ("Ready", "Declined")
+        if status not in payable_states:
             raise ValueError(f"Order {orderID} is {status}: it can be paid once it is Ready.")
         if payment is None:
             raise ValueError("Choose how to pay: a CardPayment or a CashPayment.")
@@ -279,8 +280,9 @@ class Order:
         approved = payment.processPayment(payment.paymentID)
         if approved:
             self.recordSale(orderID)
-            self.updateStatus(orderID, "Paid")
-        else:
+            if not beforeKitchen:
+                self.updateStatus(orderID, "Paid")
+        elif not beforeKitchen:
             self.updateStatus(orderID, "Declined")
         return approved
 

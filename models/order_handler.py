@@ -115,6 +115,10 @@ class OrderHandler:
             raise ValueError(f"Order {orderID} is {status}: it cannot be cancelled.")
         if not _in(status, NOT_STARTED):
             return False
+        from .payments import payment_of_order
+        payment = payment_of_order(orderID)
+        if payment is not None and not payment.refundPayment(payment.paymentID):
+            return False
         reason = self.pendingReason or "Cancelled before preparation"
         order.cancel(reason)
         self._kitchen(order).notifyCancellation(orderID)
@@ -144,10 +148,11 @@ class OrderHandler:
         status = order.getStatus(orderID)                              # 5
         if not _in(status, NEEDS_APPROVAL) or not self.pendingReason:  # 6
             return False
-        if status == "Paid":                                           # 7
-            payment = payment_of_order(orderID)
-            if payment is None or not payment.refundPayment(payment.paymentID):
-                return False
+        payment = payment_of_order(orderID)                            # 7
+        if status == "Paid" and payment is None:
+            return False
+        if payment is not None and not payment.refundPayment(payment.paymentID):
+            return False
         order.cancel(self.pendingReason)                               # 8
         self._kitchen(order).notifyCancellation(orderID)               # 9
         SalesDatabase(1).logCancellation(orderID, self.pendingReason, managerID)   # 10
@@ -177,6 +182,9 @@ class OrderHandler:
         """updateStatus("Ready"), then notifyOrderReady(orderID)."""
         order = self._order(orderID)
         order.updateStatus(orderID, "Ready")
+        from .payments import payment_of_order
+        if payment_of_order(orderID) is not None:
+            order.updateStatus(orderID, "Paid")
         self._kitchen(order).notifyOrderReady(orderID)
 
     def markOrderComplete(self, orderID: str) -> None:

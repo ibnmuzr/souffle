@@ -18,7 +18,7 @@ from models import (
     Customer, Manager, Person, Store, InventoryItem, InventoryUI, MenuItem, OrderHandler,
     Promotion, CardPayment, CashPayment, SalesReport, InventoryReport, CustomerLoyaltyReport,
 )
-from models.accounts import load_account
+from models.accounts import load_accountgi
 from models.orders import load_order
 from models.people import load_customer, load_employee
 from models.promotions import next_promotion_id

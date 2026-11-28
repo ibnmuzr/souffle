@@ -144,8 +144,18 @@ def minutes_until(est):
 
 def payment_status(order):
     """The payment status shown on the order screens."""
-    return {"Paid": "Paid", "Completed": "Paid", "Declined": "Declined",
-            "Cancelled": "Cancelled"}.get(order.orderStatus, "Awaiting Payment")
+    rows = query("SELECT status FROM payments WHERE orderID = ? "
+                 "ORDER BY paymentID DESC LIMIT 1", (order.orderID,))
+    if rows:
+        status = rows[0]["status"].lower()
+        if status == "approved":
+            return "Paid"
+        if status == "refunded":
+            return "Refunded"
+        if status == "declined":
+            return "Declined"
+    return {"Paid": "Paid", "Completed": "Paid", "Cancelled": "Cancelled"}.get(
+        order.orderStatus, "Awaiting Payment")
 
 
 def approved_payment(orderID):
@@ -332,17 +342,22 @@ def cart():
 
 @app.route("/checkout", methods=["GET", "POST"])
 def checkout():
-    """Wireframe 02 - Select Payment Method. Choosing the method submits the order:
-    reviewOrder (Entered), then submitOrder (Ordered -> Sent) gives the pickup time."""
+    """Choose payment, process online card payments, and send approved orders to the kitchen."""
     order = cart_order()
     if order is None or not order.getOrderDetails():
         flash("Your cart is empty. Add items from the menu first.", "error")
         return redirect(url_for("site_menu"))
     if request.method == "POST":
+        if request.form.get("checkout_card") == "1":
+            return checkout_card_payment(order)
         method = request.form.get("method")
         if method not in ("cash", "card"):
             flash("Please choose a payment method to continue.", "error")
             return redirect(url_for("checkout"))
+        if method == "card":
+            return render_template("pay/card_form.html", layout="site", view=order_view(order),
+                                   cancel=url_for("checkout"), action=url_for("checkout"),
+                                   form={})
         h = OrderHandler(customer=load_customer(CUSTOMER_ID), storeID=STORE_ID)
         h.selectOrder(order.orderID)
         _, printed, error = run(h.reviewOrder, order.orderID)
@@ -358,6 +373,43 @@ def checkout():
         return redirect(url_for("order_confirmed", orderID=order.orderID))
     return render_template("site/payment_method.html", view=order_view(order),
                            back=url_for("cart"), action=url_for("checkout"))
+
+
+def checkout_card_payment(order):
+    """Charge the card before submitting the order; a declined attempt leaves the cart open."""
+    paid = query("SELECT 1 FROM payments WHERE orderID = ? AND LOWER(status) = 'approved' "
+                 "LIMIT 1", (order.orderID,))
+    customer = load_customer(order.customerID)
+    if not paid:
+        form = request.form
+        payment, problems = card_payment_details(form)
+        if problems:
+            return render_template("pay/card_form.html", layout="site", view=order_view(order),
+                                   cancel=url_for("checkout"), action=url_for("checkout"),
+                                   form={"brand": form.get("brand", "visa")}, problems=problems)
+        approved, printed, error = run(customer.payOrder, order.orderID, payment, True)
+        if error:
+            show(printed, error)
+            return redirect(url_for("checkout"))
+        if not approved:
+            return render_template(
+                "pay/card_form.html", layout="site", view=order_view(order),
+                cancel=url_for("checkout"), action=url_for("checkout"),
+                form={"brand": form.get("brand", "visa")},
+                payment_error="Your card could not be authorized. Please check your details or "
+                              "try another card.")
+
+    h = OrderHandler(customer=customer, storeID=STORE_ID)
+    h.selectOrder(order.orderID)
+    _, printed, error = run(h.submitOrder, order.orderID)
+    if error:
+        show(printed, error)
+        return redirect(url_for("checkout"))
+    EST_TIMES[order.orderID] = h.estTime
+    session.pop("cart", None)
+    session.setdefault("methods", {})[order.orderID] = "card"
+    session.modified = True
+    return redirect(url_for("site_receipt", orderID=order.orderID))
 
 
 @app.route("/my-orders/<orderID>/confirmed")
@@ -453,28 +505,10 @@ def card_payment(order, layout, cancel, confirmation, change_method):
         return render_template("pay/card_form.html", layout=layout, view=view, cancel=cancel,
                                form={})
     f = request.form
-    problems = []
-    digits = "".join(ch for ch in f.get("cardNumber", "") if ch.isdigit())
-    if not f.get("cardholder", "").strip():
-        problems.append("Enter the name shown on the card.")
-    if len(digits) < 13 or len(digits) > 19:
-        problems.append("Enter a card number of 13 to 19 digits.")
-    expiry = f.get("expiry", "").strip()
-    try:
-        month, year = expiry.split("/")
-        if not (1 <= int(month) <= 12 and len(year.strip()) == 2):
-            raise ValueError
-    except ValueError:
-        problems.append("Enter the expiration date as MM/YY.")
-    if not (f.get("cvv", "").isdigit() and len(f.get("cvv", "")) in (3, 4)):
-        problems.append("Enter the 3 or 4 digit CVV.")
+    payment, problems = card_payment_details(f)
     if problems:
         return render_template("pay/card_form.html", layout=layout, view=view, cancel=cancel,
-                               form=f, problems=problems)
-    # Prototype aid: "simulate a declined card" sends a card type the terminal refuses
-    cardType = "declined-test" if f.get("simulateDecline") else \
-        CARD_BRANDS.get(f.get("brand", "visa"), "credit")
-    payment = CardPayment(0, 0.0, "card", date.today(), "", cardType, "")
+                               form={"brand": f.get("brand", "visa")}, problems=problems)
     if order.customerID:
         approved, printed, error = run(load_customer(order.customerID).payOrder,
                                        order.orderID, payment)
@@ -487,6 +521,32 @@ def card_payment(order, layout, cancel, confirmation, change_method):
                            approved=approved, amount=payment.amount,
                            confirmation=confirmation, retry=request.path,
                            change_method=change_method)
+
+
+def card_payment_details(form):
+    """Validate submitted card fields and build the existing simulated card payment."""
+    problems = []
+    digits = "".join(ch for ch in form.get("cardNumber", "") if ch.isdigit())
+    if not form.get("cardholder", "").strip():
+        problems.append("Enter the name shown on the card.")
+    if len(digits) < 13 or len(digits) > 19:
+        problems.append("Enter a card number of 13 to 19 digits.")
+    expiry = form.get("expiry", "").strip()
+    try:
+        month, year = expiry.split("/")
+        if not (1 <= int(month) <= 12 and len(year.strip()) == 2):
+            raise ValueError
+    except ValueError:
+        problems.append("Enter the expiration date as MM/YY.")
+    cvv = form.get("cvv", "")
+    if not (cvv.isdigit() and len(cvv) in (3, 4)):
+        problems.append("Enter the 3 or 4 digit CVV.")
+    if problems:
+        return None, problems
+    # Prototype aid: "simulate a declined card" sends a card type the terminal refuses.
+    card_type = "declined-test" if form.get("simulateDecline") else \
+        CARD_BRANDS.get(form.get("brand", "visa"), "credit")
+    return CardPayment(0, 0.0, "card", date.today(), "", card_type, ""), []
 
 
 def payment_confirmation(order, layout, done, done_label):

@@ -19,11 +19,11 @@
     </label>
     <label class="choice">
       <span class="t"><input type="radio" name="method" value="card" {{ 'checked' if method == 'card' }}> Pay by Credit/Debit Card</span>
-      <span class="d">{% if layout == 'portal' %}The customer pays with a credit or debit card.{% elif view.order.orderStatus in ('Ready', 'Declined') %}Pay securely online using your credit or debit card.{% else %}Pay securely online by card as soon as the kitchen marks your order Ready.{% endif %}</span>
+      <span class="d">{% if layout == 'portal' %}The customer pays with a credit or debit card.{% elif view.order.orderStatus in ('Ready', 'Declined') %}Pay securely online using your credit or debit card.{% else %}Pay securely by credit or debit card now, before your order is sent to the kitchen.{% endif %}</span>
     </label>
     <div class="actions split" style="margin-top:20px">
       <a class="btn" href="{{ back }}">{{ back_label or 'Back to Order Summary' }}</a>
-      <button class="primary">{{ 'Continue to Payment' if view.order.orderStatus in ('Ready', 'Declined') else 'Confirm and Place Order' }}</button>
+      <button class="primary">{% if layout == 'portal' %}{{ 'Continue to Payment' if view.order.orderStatus in ('Ready', 'Declined') else 'Confirm and Place Order' }}{% else %}{{ 'Continue to Payment' if view.order.orderStatus in ('Ready', 'Declined') else 'Continue to Checkout' }}{% endif %}</button>
     </div>
   </form>
 </div>

@@ -32,8 +32,8 @@
     <b>Please pay {{ money(view.order.orderTotal) }} in cash when picking up your order at Soufflé.</b>
     <div class="small muted">Payment is still pending. An employee will process your cash payment in-store.</div>
   {% else %}
-    <b>You will pay {{ money(view.order.orderTotal) }} by card once your order is Ready.</b>
-    <div class="small muted">We'll start preparing it now. When the status in My Orders shows Ready, select “Pay by Card”.</div>
+    <b>Your card payment has been approved.</b>
+    <div class="small muted">Your order has been sent to the kitchen.</div>
   {% endif %}
 </div>
 

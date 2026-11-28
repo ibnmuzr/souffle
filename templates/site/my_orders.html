@@ -4,7 +4,7 @@
 {% block content %}
 <div class="crumb">My Orders</div>
 <h1>My Orders</h1>
-<p class="lead">Follow your orders. Pay by card here once an order is Ready.</p>
+<p class="lead">Follow your orders and check payment status.</p>
 
 <div class="box">
   <table>
@@ -21,7 +21,7 @@
       <td>
         {% if v.order.orderStatus in ('Ready', 'Declined') %}
           <a class="btn primary sm" href="{{ url_for('site_pay', orderID=v.order.orderID) }}">Pay now</a>
-        {% elif v.order.orderStatus in ('Paid', 'Completed') %}
+        {% elif row.payment == 'Paid' or v.order.orderStatus in ('Paid', 'Completed') %}
           <a class="btn sm" href="{{ url_for('site_receipt', orderID=v.order.orderID) }}">Receipt</a>
         {% elif v.order.orderStatus == 'In process' %}
           <a class="btn sm" href="{{ url_for('cart') }}">Open cart</a>
